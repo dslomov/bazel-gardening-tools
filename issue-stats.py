@@ -2,6 +2,7 @@
 
 import datetime
 import argparse
+import itertools
 import json
 import urllib.request
 
@@ -35,7 +36,7 @@ def get_next_url(response):
 def fetch_issues(query):
     url = 'https://api.github.com/repos/bazelbuild/bazel/issues?client_id=' + client_id + '&client_secret=' + client_secret + '&per_page=100&' + query
     result = dict()
-    while url != None:
+    while url:
         print(url)
         response = urllib.request.urlopen(url)
         issues = json.loads(response.read())
@@ -47,7 +48,7 @@ def fetch_issues(query):
 
 
 def dump_all_open_issues():
-    issues = fetch_issues("q=is:issue&is:open")
+    issues = fetch_issues("q=is:open")
     json.dump(issues, open(all_open_issues_file, "w+"), indent=2)
 
 
@@ -152,6 +153,23 @@ def print_report(issues, header, predicate, printer):
     print("---------------------------")
 
 
+def print_report_group_by_team(issues, header, predicate, printer):
+    def teamof(issue):
+        t = list(teams(issue))
+        if len(t) == 0:
+            return "<No team>"
+        else:
+            return t[0]
+
+    print(header)
+    sorted_issues = sorted(filter(predicate, issues), key=teamof)
+    for team, issues in itertools.groupby(sorted_issues, teamof):
+        print("%s:" % team)
+        for issue in issues:
+            print(printer(issue))
+    print("---------------------------")
+
+
 def issues_without_team(reporter, issues):
     reporter(
         issues,
@@ -216,11 +234,21 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
         printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)))
 
 
-def report():
+def report(which_reports):
     issues = json.load(open(all_open_issues_file))
-    more_than_one_team(print_report, issues)
-    issues_without_team(print_report, issues)
-    have_team_no_untriaged_no_priority(print_report, issues)
+    for r in which_reports:
+        reports[r](issues)
+
+
+reports = {
+    "more_than_one_team":
+    lambda issues: more_than_one_team(print_report, issues),
+    "issues_without_team":
+    lambda issues: issues_without_team(print_report, issues),
+    "triaged_no_priority":
+    lambda issues: have_team_no_untriaged_no_priority(
+        print_report_group_by_team, issues)
+}
 
 
 def garden(list_issues, list_pull_requests, stale_for_days):
@@ -236,7 +264,7 @@ def main():
         description="Gather Bazel's issues and pull requests data")
     subparsers = parser.add_subparsers(dest="command", help="select a command")
 
-    update_parser = subparsers.add_parser("update", help="update the datasets")
+    subparsers.add_parser("update", help="update the datasets")
 
     report_parser = subparsers.add_parser(
         "report", help="generate a full report")
@@ -264,12 +292,26 @@ def main():
         help=
         "list issues/prs that have not been updated for more than the specified number of days (number, default is 0)"
     )
+
+    report_selector = report_parser.add_mutually_exclusive_group()
+    report_selector.add_argument(
+        '-a',
+        '--all',
+        action="store_true",
+        dest="all_reports",
+        help="show all reports")
+    report_selector.add_argument(
+        "-r",
+        "--report",
+        action="append",
+        choices=list(reports.keys()),
+        help="show selected report (multiple values possible)")
     args = parser.parse_args()
 
     if args.command == "update":
         update()
     elif args.command == "report":
-        report()
+        report(args.report if args.report else list(reports.keys()))
     elif args.command == "garden":
         garden(args.list_issues, args.list_pull_requests, args.stale_for_days)
     else:
