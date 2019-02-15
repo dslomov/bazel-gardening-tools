@@ -311,7 +311,7 @@ def main():
     if args.command == "update":
         update()
     elif args.command == "report":
-        report(list(reports.keys()) if args.all_reports else args.report)
+        report(args.report if args.report else list(reports.keys()))
     elif args.command == "garden":
         garden(args.list_issues, args.list_pull_requests, args.stale_for_days)
     else:
