@@ -42,7 +42,7 @@ def fetch_issues(query):
             result[issue["number"]] = issue
         url = get_next_url(response.info())
     print(len(result))
-    return result.values()
+    return list(result.values())
 
 
 def dump_all_open_issues():
@@ -136,8 +136,8 @@ def print_report(issues, header, predicate, printer):
     print("---------------------------")
 
 
-def issues_without_team(issues):
-    print_report(
+def issues_without_team(reporter, issues):
+    reporter(
         issues,
         header="Open issues not assigned to any team",
         predicate=lambda issue: not has_team_label(issue),
@@ -145,7 +145,7 @@ def issues_without_team(issues):
     )
 
 
-def more_than_one_team(issues):
+def more_than_one_team(reporter, issues):
     def predicate(issue):
         return len(list(teams(issue))) > 1
 
@@ -153,15 +153,15 @@ def more_than_one_team(issues):
         n = issue["number"]
         return "%s: %s %s" % (n, ",".join(teams(issue)), issue_url(issue))
 
-    print_report(
+    reporter(
         issues,
         header="Issues assigned to more than one team:",
         predicate=predicate,
         printer=printer)
 
 
-def have_team_no_untriaged_no_priority(issues):
-    print_report(
+def have_team_no_untriaged_no_priority(reporter, issues):
+    reporter(
         issues,
         header="Triaged issues without priority",
         predicate=lambda issue: has_team_label(issue) and not has_label(
@@ -170,8 +170,8 @@ def have_team_no_untriaged_no_priority(issues):
             issue), ",".join(teams(issue))))
 
 
-def issues_to_garden(issues):
-    print_report(
+def issues_to_garden(reporter, issues):
+    reporter(
         issues,
         header="Open issues not assigned to any team or person",
         predicate=lambda issue: not has_team_label(issue) and not issue[
@@ -179,8 +179,8 @@ def issues_to_garden(issues):
         printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)))
 
 
-def pull_requests_to_garden(issues):
-    print_report(
+def pull_requests_to_garden(reporter, issues):
+    reporter(
         issues,
         header="Open pull requests not assigned to any team or person",
         predicate=lambda issue: not has_team_label(issue) and not issue[
@@ -190,17 +190,17 @@ def pull_requests_to_garden(issues):
 
 def report():
     issues = json.load(open(all_open_issues_file))
-    more_than_one_team(issues)
-    issues_without_team(issues)
-    have_team_no_untriaged_no_priority(issues)
+    more_than_one_team(print_report, issues)
+    issues_without_team(print_report, issues)
+    have_team_no_untriaged_no_priority(print_report, issues)
 
 
 def garden(list_issues, list_pull_requests):
     issues = json.load(open(all_open_issues_file))
     if list_issues:
-        issues_to_garden(issues)
+        issues_to_garden(print_report, issues)
     if list_pull_requests:
-        pull_requests_to_garden(issues)
+        pull_requests_to_garden(print_report, issues)
 
 
 def main():
@@ -236,6 +236,7 @@ def main():
         report()
     elif args.command == "garden":
         garden(args.list_issues, args.list_pull_requests)
-
+    else:
+        parser.print_usage()
 
 main()
