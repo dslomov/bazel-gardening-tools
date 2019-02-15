@@ -236,6 +236,7 @@ def main():
         report()
     elif args.command == "garden":
         garden(args.list_issues, args.list_pull_requests)
-
+    else:
+        parser.print_usage()
 
 main()
