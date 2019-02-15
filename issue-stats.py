@@ -221,13 +221,13 @@ def main():
         '--list_issues',
         default=True,
         type=lambda x: (str(x).lower() == 'true'),
-        help="list issues that need attention")
+        help="list issues that need attention (true/false)")
     garden_parser.add_argument(
         '-p',
         '--list_pull_requests',
         default=True,
         type=lambda x: (str(x).lower() == 'true'),
-        help="list pull requests that need attention")
+        help="list pull requests that need attention (true/false)")
     args = parser.parse_args()
 
     if args.command == "update":
