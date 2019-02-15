@@ -1,11 +1,8 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import argparse
-
-import sys, json, urllib2
+import json
+import urllib.request
 
 secrets = json.load(open("secrets.json"))
 client_id = secrets["client_id"]
@@ -16,7 +13,7 @@ all_labels_file = "all-labels.json"
 
 
 def load_json(url):
-    response = urllib2.urlopen(url).read()
+    response = urllib.request.urlopen(url).read()
     return json.loads(response)
 
 
@@ -35,12 +32,11 @@ def get_next_url(response):
 
 
 def fetch_issues(query):
-    start_at = 0
     url = 'https://api.github.com/repos/bazelbuild/bazel/issues?client_id=' + client_id + '&client_secret=' + client_secret + '&per_page=100&' + query
     result = dict()
     while url != None:
         print(url)
-        response = urllib2.urlopen(url)
+        response = urllib.request.urlopen(url)
         issues = json.loads(response.read())
         for issue in issues:
             result[issue["number"]] = issue
@@ -59,7 +55,7 @@ def dump_labels():
     url = 'https://api.github.com/repos/bazelbuild/bazel/labels?client_id=' + client_id + '&client_secret=' + client_secret
     while url:
         print(url)
-        response = urllib2.urlopen(url)
+        response = urllib.request.urlopen(url)
         ls = json.loads(response.read())
         labels += ls
         url = get_next_url(response.info())
@@ -85,7 +81,6 @@ def team_labels(labels):
 
 
 def all_teams(labels):
-    teams = []
     for team_label in team_labels(labels):
         yield team_label["name"]
 
@@ -145,14 +140,14 @@ def issues_without_team(issues):
     print_report(
         issues,
         header="Open issues not assigned to any team",
-        predicate=lambda (issue): not has_team_label(issue),
-        printer=lambda (issue): "%s: %s" % (issue["number"], issue_url(issue)),
+        predicate=lambda issue: not has_team_label(issue),
+        printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)),
     )
 
 
 def more_than_one_team(issues):
     def predicate(issue):
-        return len(teams(issue)) > 1
+        return len(list(teams(issue))) > 1
 
     def printer(issue):
         n = issue["number"]
@@ -166,29 +161,31 @@ def more_than_one_team(issues):
 
 
 def have_team_no_untriaged_no_priority(issues):
-    print_report(issues,
-      header = "Triaged issues without priority",
-                 predicate = lambda(issue): has_team_label(issue) and not has_label(issue, "untriaged") and not has_priority(issue),
-                 printer = lambda(issue): "%s: %s (%s)" % (issue["number"], issue_url(issue), ",".join(teams(issue)))
-    )
+    print_report(
+        issues,
+        header="Triaged issues without priority",
+        predicate=lambda issue: has_team_label(issue) and not has_label(
+            issue, "untriaged") and not has_priority(issue),
+        printer=lambda issue: "%s: %s (%s)" % (issue["number"], issue_url(
+            issue), ",".join(teams(issue))))
 
 
 def issues_to_garden(issues):
     print_report(
         issues,
         header="Open issues not assigned to any team or person",
-        predicate=
-        lambda (issue): not has_team_label(issue) and not issue["assignee"] and not is_pull_request(issue),
-        printer=lambda (issue): "%s: %s" % (issue["number"], issue_url(issue)))
+        predicate=lambda issue: not has_team_label(issue) and not issue[
+            "assignee"] and not is_pull_request(issue),
+        printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)))
 
 
 def pull_requests_to_garden(issues):
     print_report(
         issues,
         header="Open pull requests not assigned to any team or person",
-        predicate=
-        lambda (issue): not has_team_label(issue) and not issue["assignee"] and is_pull_request(issue),
-        printer=lambda (issue): "%s: %s" % (issue["number"], issue_url(issue)))
+        predicate=lambda issue: not has_team_label(issue) and not issue[
+            "assignee"] and is_pull_request(issue),
+        printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)))
 
 
 def report():
@@ -213,9 +210,12 @@ def main():
 
     update_parser = subparsers.add_parser("update", help="update the datasets")
 
-    report_parser = subparsers.add_parser("report", help="generate a full report")
+    report_parser = subparsers.add_parser(
+        "report", help="generate a full report")
 
-    garden_parser = subparsers.add_parser("garden", help="generate issues/pull requests that need gardening attention")
+    garden_parser = subparsers.add_parser(
+        "garden",
+        help="generate issues/pull requests that need gardening attention")
     garden_parser.add_argument(
         '-i',
         '--list_issues',
