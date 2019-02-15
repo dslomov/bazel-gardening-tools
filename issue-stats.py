@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import datetime
 import argparse
 import json
 import urllib.request
@@ -70,6 +71,13 @@ def update():
 #
 # Helpers
 #
+
+
+# GitHub API datetime-stamps are already in UTC / Zulu time (+0000)
+def parse_datetime(datetime_string):
+    return datetime.datetime.strptime(datetime_string, "%Y-%m-%dT%H:%M:%SZ")
+
+
 def issue_url(issue):
     return "https://github.com/bazelbuild/bazel/issues/" + str(issue["number"])
 
@@ -118,6 +126,14 @@ def has_priority(issue):
 
 def teams(issue):
     return map(lambda i: i["name"], team_labels(issue["labels"]))
+
+
+def latest_update_days_ago(issue):
+    return (datetime.datetime.now() - parse_datetime(issue["updated_at"])).days
+
+
+def is_stale(issue, days_ago):
+    return latest_update_days_ago(issue) >= days_ago
 
 
 #
@@ -170,21 +186,33 @@ def have_team_no_untriaged_no_priority(reporter, issues):
             issue), ",".join(teams(issue))))
 
 
-def issues_to_garden(reporter, issues):
+def issues_to_garden(reporter, issues, stale_for_days):
+    def predicate(issue):
+        return \
+            not has_team_label(issue) \
+            and not issue["assignee"] \
+            and not is_pull_request(issue) \
+            and is_stale(issue, stale_for_days)
+
     reporter(
         issues,
         header="Open issues not assigned to any team or person",
-        predicate=lambda issue: not has_team_label(issue) and not issue[
-            "assignee"] and not is_pull_request(issue),
+        predicate=predicate,
         printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)))
 
 
-def pull_requests_to_garden(reporter, issues):
+def pull_requests_to_garden(reporter, issues, stale_for_days):
+    def predicate(issue):
+        return \
+            not has_team_label(issue) \
+            and not issue["assignee"] \
+            and is_pull_request(issue) \
+            and is_stale(issue, stale_for_days)
+
     reporter(
         issues,
         header="Open pull requests not assigned to any team or person",
-        predicate=lambda issue: not has_team_label(issue) and not issue[
-            "assignee"] and is_pull_request(issue),
+        predicate=predicate,
         printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)))
 
 
@@ -195,12 +223,12 @@ def report():
     have_team_no_untriaged_no_priority(print_report, issues)
 
 
-def garden(list_issues, list_pull_requests):
+def garden(list_issues, list_pull_requests, stale_for_days):
     issues = json.load(open(all_open_issues_file))
     if list_issues:
-        issues_to_garden(print_report, issues)
+        issues_to_garden(print_report, issues, stale_for_days)
     if list_pull_requests:
-        pull_requests_to_garden(print_report, issues)
+        pull_requests_to_garden(print_report, issues, stale_for_days)
 
 
 def main():
@@ -228,6 +256,14 @@ def main():
         default=True,
         type=lambda x: (str(x).lower() == 'true'),
         help="list pull requests that need attention (true/false)")
+    garden_parser.add_argument(
+        '-s',
+        '--stale_for_days',
+        type=int,
+        default=0,
+        help=
+        "list issues/prs that have not been updated for more than the specified number of days (number, default is 0)"
+    )
     args = parser.parse_args()
 
     if args.command == "update":
@@ -235,8 +271,9 @@ def main():
     elif args.command == "report":
         report()
     elif args.command == "garden":
-        garden(args.list_issues, args.list_pull_requests)
+        garden(args.list_issues, args.list_pull_requests, args.stale_for_days)
     else:
         parser.print_usage()
+
 
 main()
