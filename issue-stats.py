@@ -218,15 +218,15 @@ def main():
     garden_parser = subparsers.add_parser("garden", help="generate issues/pull requests that need gardening attention")
     garden_parser.add_argument(
         '-i',
-        '--issues',
-        action='store_true',
+        '--list_issues',
         default=True,
+        type=lambda x: (str(x).lower() == 'true'),
         help="list issues that need attention")
     garden_parser.add_argument(
         '-p',
-        '--pull_requests',
-        action='store_true',
+        '--list_pull_requests',
         default=True,
+        type=lambda x: (str(x).lower() == 'true'),
         help="list pull requests that need attention")
     args = parser.parse_args()
 
@@ -235,7 +235,7 @@ def main():
     elif args.command == "report":
         report()
     elif args.command == "garden":
-        garden(args.issues, args.pull_requests)
+        garden(args.list_issues, args.list_pull_requests)
 
 
 main()
