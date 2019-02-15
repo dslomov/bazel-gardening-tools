@@ -185,9 +185,9 @@ def issues_to_garden(issues):
 def pull_requests_to_garden(issues):
     print_report(
         issues,
-        header="Open issues not assigned to any team or person",
+        header="Open pull requests not assigned to any team or person",
         predicate=
-        lambda (issue): not has_team_label(issue) and not issue["assignee"] and not is_pull_request(issue),
+        lambda (issue): not has_team_label(issue) and not issue["assignee"] and is_pull_request(issue),
         printer=lambda (issue): "%s: %s" % (issue["number"], issue_url(issue)))
 
 
