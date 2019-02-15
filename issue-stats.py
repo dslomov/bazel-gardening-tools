@@ -35,7 +35,7 @@ def get_next_url(response):
 def fetch_issues(query):
     url = 'https://api.github.com/repos/bazelbuild/bazel/issues?client_id=' + client_id + '&client_secret=' + client_secret + '&per_page=100&' + query
     result = dict()
-    while url != None:
+    while url:
         print(url)
         response = urllib.request.urlopen(url)
         issues = json.loads(response.read())
@@ -47,7 +47,7 @@ def fetch_issues(query):
 
 
 def dump_all_open_issues():
-    issues = fetch_issues("q=is:issue&is:open")
+    issues = fetch_issues("q=is:open")
     json.dump(issues, open(all_open_issues_file, "w+"), indent=2)
 
 
@@ -152,6 +152,10 @@ def print_report(issues, header, predicate, printer):
     print("---------------------------")
 
 
+def print_report_group_by_team(issues, header, predicate, printer):
+    print(header)
+
+
 def issues_without_team(reporter, issues):
     reporter(
         issues,
@@ -236,10 +240,9 @@ def main():
         description="Gather Bazel's issues and pull requests data")
     subparsers = parser.add_subparsers(dest="command", help="select a command")
 
-    update_parser = subparsers.add_parser("update", help="update the datasets")
+    subparsers.add_parser("update", help="update the datasets")
 
-    report_parser = subparsers.add_parser(
-        "report", help="generate a full report")
+    subparsers.add_parser("report", help="generate a full report")
 
     garden_parser = subparsers.add_parser(
         "garden",
