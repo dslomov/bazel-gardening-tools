@@ -125,6 +125,10 @@ def has_priority(issue):
     return has_any_of_labels(issue, ["P0", "P1", "P2", "P3"])
 
 
+def needs_more_data(issue):
+    return has_label(issue, "more data needed")
+
+
 def teams(issue):
     return map(lambda i: i["name"], team_labels(issue["labels"]))
 
@@ -199,7 +203,8 @@ def have_team_no_untriaged_no_priority(reporter, issues):
         issues,
         header="Triaged issues without priority",
         predicate=lambda issue: has_team_label(issue) and not has_label(
-            issue, "untriaged") and not has_priority(issue),
+            issue, "untriaged") and not has_priority(issue) and
+        not needs_more_data(issue) and not is_pull_request(issue),
         printer=lambda issue: "%s: %s (%s)" % (issue["number"], issue_url(
             issue), ",".join(teams(issue))))
 
