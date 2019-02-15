@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import argparse
 
 import sys, json, urllib2
 
@@ -181,6 +182,15 @@ def issues_to_garden(issues):
         printer=lambda (issue): "%s: %s" % (issue["number"], issue_url(issue)))
 
 
+def pull_requests_to_garden(issues):
+    print_report(
+        issues,
+        header="Open issues not assigned to any team or person",
+        predicate=
+        lambda (issue): not has_team_label(issue) and not issue["assignee"] and not is_pull_request(issue),
+        printer=lambda (issue): "%s: %s" % (issue["number"], issue_url(issue)))
+
+
 def report():
     issues = json.load(open(all_open_issues_file))
     more_than_one_team(issues)
@@ -188,24 +198,44 @@ def report():
     have_team_no_untriaged_no_priority(issues)
 
 
-def garden():
+def garden(list_issues, list_pull_requests):
     issues = json.load(open(all_open_issues_file))
-    issues_to_garden(issues)
+    if list_issues:
+        issues_to_garden(issues)
+    if list_pull_requests:
+        pull_requests_to_garden(issues)
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: %s (update|report|garden)" % sys.argv[0])
-        exit(1)
-    if sys.argv[1] == "update":
+    parser = argparse.ArgumentParser(
+        description="Gather Bazel's issues and pull requests data")
+    subparsers = parser.add_subparsers(dest="command", help="select a command")
+
+    update_parser = subparsers.add_parser("update", help="update the datasets")
+
+    report_parser = subparsers.add_parser("report", help="generate a full report")
+
+    garden_parser = subparsers.add_parser("garden", help="generate issues/pull requests that need gardening attention")
+    garden_parser.add_argument(
+        '-i',
+        '--issues',
+        action='store_true',
+        default=True,
+        help="list issues that need attention")
+    garden_parser.add_argument(
+        '-p',
+        '--pull_requests',
+        action='store_true',
+        default=True,
+        help="list pull requests that need attention")
+    args = parser.parse_args()
+
+    if args.command == "update":
         update()
-    elif sys.argv[1] == "report":
+    elif args.command == "report":
         report()
-    elif sys.argv[1] == "garden":
-        garden()
-    else:
-        print("Usage: %s (update|report|garden)" % sys.argv[0])
-        exit(1)
+    elif args.command == "garden":
+        garden(args.issues, args.pull_requests)
 
 
 main()
