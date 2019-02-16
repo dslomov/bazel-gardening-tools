@@ -122,7 +122,7 @@ def has_any_of_labels(issue, labels):
 
 
 def has_priority(issue):
-    return has_any_of_labels(issue, ["P0", "P1", "P2", "P3"])
+    return has_any_of_labels(issue, ["P0", "P1", "P2", "P3", "P4"])
 
 
 def needs_more_data(issue):
