@@ -129,6 +129,10 @@ def needs_more_data(issue):
     return has_label(issue, "more data needed")
 
 
+def work_in_progress(issue):
+    return has_label(issue, "WIP")
+
+
 def teams(issue):
     return map(lambda i: i["name"], team_labels(issue["labels"]))
 
@@ -215,7 +219,8 @@ def issues_to_garden(reporter, issues, stale_for_days):
             not has_team_label(issue) \
             and not issue["assignee"] \
             and not is_pull_request(issue) \
-            and is_stale(issue, stale_for_days)
+            and is_stale(issue, stale_for_days) \
+            and not work_in_progress(issue)
 
     reporter(
         issues,
@@ -230,7 +235,8 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
             not has_team_label(issue) \
             and not issue["assignee"] \
             and is_pull_request(issue) \
-            and is_stale(issue, stale_for_days)
+            and is_stale(issue, stale_for_days) \
+            and not work_in_progress(issue)
 
     reporter(
         issues,
