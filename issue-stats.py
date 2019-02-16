@@ -174,12 +174,39 @@ def print_report_group_by_team(issues, header, predicate, printer):
     print("---------------------------")
 
 
+def make_console_printer(show_number=True,
+                         show_url=True,
+                         show_title=False,
+                         show_teams=False):
+    """A customizable console printer."""
+
+    def truncate(string, length):
+        return string[:length] + ".." if len(string) > length else string
+
+    def printer(issue):
+        output = []
+
+        if show_number:
+            output.append(("{: <4}", issue["number"]))
+        if show_url:
+            output.append(("{: <47}", issue_url(issue)))
+        if show_title:
+            output.append(("{: <50}", truncate(issue["title"], 48)))
+        if show_teams:
+            output.append(("{: <30}", truncate(",".join(teams(issue)), 28)))
+
+        return " | ".join([parts[0] for parts in output
+                           ]).format(*[parts[1] for parts in output])
+
+    return printer
+
+
 def issues_without_team(reporter, issues):
     reporter(
         issues,
         header="Open issues not assigned to any team",
         predicate=lambda issue: not has_team_label(issue),
-        printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)),
+        printer=make_console_printer(show_title=True),
     )
 
 
@@ -195,7 +222,7 @@ def more_than_one_team(reporter, issues):
         issues,
         header="Issues assigned to more than one team:",
         predicate=predicate,
-        printer=printer)
+        printer=make_console_printer(show_teams=True))
 
 
 def have_team_no_untriaged_no_priority(reporter, issues):
@@ -205,8 +232,7 @@ def have_team_no_untriaged_no_priority(reporter, issues):
         predicate=lambda issue: has_team_label(issue) and not has_label(
             issue, "untriaged") and not has_priority(issue) and
         not needs_more_data(issue) and not is_pull_request(issue),
-        printer=lambda issue: "%s: %s (%s)" % (issue["number"], issue_url(
-            issue), ",".join(teams(issue))))
+        printer=make_console_printer(show_teams=True))
 
 
 def issues_to_garden(reporter, issues, stale_for_days):
@@ -221,7 +247,7 @@ def issues_to_garden(reporter, issues, stale_for_days):
         issues,
         header="Open issues not assigned to any team or person",
         predicate=predicate,
-        printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)))
+        printer=make_console_printer(show_title=True))
 
 
 def pull_requests_to_garden(reporter, issues, stale_for_days):
@@ -236,7 +262,7 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
         issues,
         header="Open pull requests not assigned to any team or person",
         predicate=predicate,
-        printer=lambda issue: "%s: %s" % (issue["number"], issue_url(issue)))
+        printer=make_console_printer(show_title=True))
 
 
 def report(which_reports):
