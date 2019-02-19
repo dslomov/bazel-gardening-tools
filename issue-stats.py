@@ -145,6 +145,10 @@ def is_stale(issue, days_ago):
     return latest_update_days_ago(issue) >= days_ago
 
 
+def has_cla(issue):
+    return has_label(issue, "cla: yes")
+
+
 #
 # Reports
 #
@@ -262,7 +266,8 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
             and not issue["assignee"] \
             and is_pull_request(issue) \
             and is_stale(issue, stale_for_days) \
-            and not work_in_progress(issue)
+            and not work_in_progress(issue) \
+            and has_cla(issue)
 
     reporter(
         issues,
