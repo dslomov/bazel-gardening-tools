@@ -10,7 +10,7 @@ secrets = json.load(open("secrets.json"))
 client_id = secrets["client_id"]
 client_secret = secrets["client_secret"]
 
-all_open_issues_file = "all-open-issues.json"
+all_issues_file = "all-issues.json"
 all_labels_file = "all-labels.json"
 
 
@@ -34,7 +34,9 @@ def get_next_url(response):
 
 
 def fetch_issues(query):
-    url = 'https://api.github.com/repos/bazelbuild/bazel/issues?client_id=' + client_id + '&client_secret=' + client_secret + '&per_page=100&' + query
+    url = 'https://api.github.com/repos/bazelbuild/bazel/issues?' \
+          'client_id=' + client_id + '&client_secret=' + client_secret + '&per_page=100&'\
+          + query
     result = dict()
     while url:
         print(url)
@@ -47,14 +49,15 @@ def fetch_issues(query):
     return list(result.values())
 
 
-def dump_all_open_issues():
-    issues = fetch_issues("q=is:open")
-    json.dump(issues, open(all_open_issues_file, "w+"), indent=2)
+def dump_issues():
+    issues = fetch_issues("")
+    json.dump(issues, open(all_issues_file, "w+"), indent=2)
 
 
 def dump_labels():
     labels = []
-    url = 'https://api.github.com/repos/bazelbuild/bazel/labels?client_id=' + client_id + '&client_secret=' + client_secret
+    url = 'https://api.github.com/repos/bazelbuild/bazel/labels?client_id='\
+          + client_id + '&client_secret=' + client_secret
     while url:
         print(url)
         response = urllib.request.urlopen(url)
@@ -65,7 +68,7 @@ def dump_labels():
 
 
 def update():
-    dump_all_open_issues()
+    dump_issues()
     dump_labels()
 
 
@@ -97,6 +100,9 @@ def all_teams(labels):
 #
 # Issue predicates
 #
+def is_open(issue):
+    return issue["state"] == "open"
+
 def has_team_label(issue):
     for _ in team_labels(issue["labels"]):
         return True
@@ -213,18 +219,14 @@ def issues_without_team(reporter, issues):
     reporter(
         issues,
         header="Open issues not assigned to any team",
-        predicate=lambda issue: not has_team_label(issue),
+        predicate=lambda issue: is_open(issue) and not has_team_label(issue),
         printer=make_console_printer(show_title=True),
     )
 
 
 def more_than_one_team(reporter, issues):
     def predicate(issue):
-        return len(list(teams(issue))) > 1
-
-    def printer(issue):
-        n = issue["number"]
-        return "%s: %s %s" % (n, ",".join(teams(issue)), issue_url(issue))
+        return is_open(issue) and len(list(teams(issue))) > 1
 
     reporter(
         issues,
@@ -237,9 +239,12 @@ def have_team_no_untriaged_no_priority(reporter, issues):
     reporter(
         issues,
         header="Triaged issues without priority",
-        predicate=lambda issue: has_team_label(issue) and not has_label(
-            issue, "untriaged") and not has_priority(issue) and
-        not needs_more_data(issue) and not is_pull_request(issue),
+        predicate=lambda issue: is_open(issue)
+                                and has_team_label(issue)
+                                and not has_label(issue, "untriaged")
+                                and not has_priority(issue)
+                                and not needs_more_data(issue)
+                                and not is_pull_request(issue),
         printer=make_console_printer(show_teams=True))
 
 
@@ -277,7 +282,7 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
 
 
 def report(which_reports):
-    issues = json.load(open(all_open_issues_file))
+    issues = json.load(open(all_issues_file))
     for r in which_reports:
         reports[r](issues)
 
@@ -294,7 +299,8 @@ reports = {
 
 
 def garden(list_issues, list_pull_requests, stale_for_days):
-    issues = json.load(open(all_open_issues_file))
+    # We are only gardening open issues
+    issues = filter(is_open, json.load(open(all_issues_file)))
     if list_issues:
         issues_to_garden(print_report, issues, stale_for_days)
     if list_pull_requests:
