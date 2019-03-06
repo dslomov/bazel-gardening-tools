@@ -5,7 +5,9 @@ import argparse
 import itertools
 import json
 import urllib.request
+import ssl
 
+ssl._create_default_https_context = ssl._create_unverified_context
 secrets = json.load(open("secrets.json"))
 client_id = secrets["client_id"]
 client_secret = secrets["client_secret"]
