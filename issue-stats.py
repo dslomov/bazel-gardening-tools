@@ -16,6 +16,23 @@ all_issues_file = "all-issues.json"
 all_labels_file = "all-labels.json"
 
 
+REPOS = [
+  'bazelbuild/starlark',
+  'bazelbuild/bazel-website',
+  'bazelbuild/bazel-skylib',
+  'bazelbuild/bazel',
+]
+
+GITHUB_API_URL_BASE = 'https://api.github.com/repos/'
+
+
+def add_client_secret(url):
+    sep = '&'
+    if not '?' in url:
+        sep = '?'
+    return url + sep + 'client_id=' + client_id + '&client_secret=' + client_secret
+
+
 def load_json(url):
     response = urllib.request.urlopen(url).read()
     return json.loads(response)
@@ -35,14 +52,19 @@ def get_next_url(response):
     return None
 
 
-def fetch_issues(query):
-    url = 'https://api.github.com/repos/bazelbuild/bazel/issues?' \
-          'client_id=' + client_id + '&client_secret=' + client_secret + '&per_page=100&'\
-          + query
+def fetch_issues(repo, query):
+    """Fetches issues from a repo.
+
+    Args:
+      repo: (str) '<organization>/<repo>'
+      query: (str) optional query
+    """
+    url = GITHUB_API_URL_BASE + repo + '/issues?per_page=100&' + query
     result = dict()
+    i = 0
     while url:
         print(url)
-        response = urllib.request.urlopen(url)
+        response = urllib.request.urlopen(add_client_secret(url))
         issues = json.loads(response.read())
         for issue in issues:
             result[issue["number"]] = issue
@@ -52,26 +74,34 @@ def fetch_issues(query):
 
 
 def dump_issues():
-    issues = fetch_issues("")
+    issues = []
+    for repo in REPOS:
+        issues.extend(fetch_issues(repo, ""))
     json.dump(issues, open(all_issues_file, "w+"), indent=2)
 
 
-def dump_labels():
+def label_file_for_repo(repo):
+    repo_basename = repo.split('/')[-1]
+    return 'labels.%s.json' % repo_basename
+
+
+def dump_labels(repo):
     labels = []
-    url = 'https://api.github.com/repos/bazelbuild/bazel/labels?client_id='\
-          + client_id + '&client_secret=' + client_secret
+    url = GITHUB_API_URL_BASE + repo + '/labels'
     while url:
         print(url)
-        response = urllib.request.urlopen(url)
+        response = urllib.request.urlopen(add_client_secret(url))
         ls = json.loads(response.read())
         labels += ls
         url = get_next_url(response.info())
-    json.dump(labels, open(all_labels_file, "w+"), indent=2)
+    repo_basename = repo.split('/')[-1]
+    json.dump(labels, open(label_file_for_repo(repo), "w+"), indent=2)
 
 
 def update():
     dump_issues()
-    dump_labels()
+    for repo in REPOS:
+      dump_labels(repo)
 
 
 #
@@ -85,7 +115,7 @@ def parse_datetime(datetime_string):
 
 
 def issue_url(issue):
-    return "https://github.com/bazelbuild/bazel/issues/" + str(issue["number"])
+    return issue["url"]
 
 
 def team_labels(labels):
@@ -325,14 +355,12 @@ def main():
     garden_parser.add_argument(
         '-i',
         '--list_issues',
-        default=True,
-        type=lambda x: (str(x).lower() == 'true'),
+        action='store_true',
         help="list issues that need attention (true/false)")
     garden_parser.add_argument(
         '-p',
         '--list_pull_requests',
-        default=True,
-        type=lambda x: (str(x).lower() == 'true'),
+        action='store_true',
         help="list pull requests that need attention (true/false)")
     garden_parser.add_argument(
         '-s',
