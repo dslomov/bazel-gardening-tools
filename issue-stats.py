@@ -115,7 +115,7 @@ def parse_datetime(datetime_string):
 
 
 def issue_url(issue):
-    return issue["url"]
+    return issue["html_url"]
 
 
 def team_labels(labels):
