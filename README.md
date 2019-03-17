@@ -19,4 +19,3 @@ Usage:
    `issue-stats.py garden`
 1. Feel free to modify those - I hope code is self-explanatory.
 
-
