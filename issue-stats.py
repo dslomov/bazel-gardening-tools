@@ -4,6 +4,7 @@ import datetime
 import argparse
 import itertools
 import json
+import os
 import urllib.request
 import ssl
 
@@ -52,14 +53,26 @@ def get_next_url(response):
     return None
 
 
-def fetch_issues(repo, query):
+def fetch_issues(repo, query, modified_after=None):
     """Fetches issues from a repo.
 
     Args:
       repo: (str) '<organization>/<repo>'
       query: (str) optional query
+      modified_after: (float) only fetch issues modified after this (UTC) time.
     """
-    url = GITHUB_API_URL_BASE + repo + '/issues?per_page=100&' + query
+    query_args = [
+        'state=all',  # needed to get closed issues
+        'per_page=100',
+    ]
+    if query:
+        query_args.append(query)
+    if modified_after:
+        utc_time_s = datetime.datetime.utcfromtimestamp(
+            modified_after).strftime('%Y-%m-%dT%H:%M:%SZ')
+        query_args.append('since=%s' % utc_time_s)
+        print('Fecthing issues changed since: %s' % utc_time_s)
+    url = GITHUB_API_URL_BASE + repo + '/issues?' + '&'.join(query_args)
     result = dict()
     i = 0
     while url:
@@ -71,13 +84,6 @@ def fetch_issues(repo, query):
         url = get_next_url(response.info())
     print(len(result))
     return list(result.values())
-
-
-def dump_issues():
-    issues = []
-    for repo in REPOS:
-        issues.extend(fetch_issues(repo, ""))
-    json.dump(issues, open(all_issues_file, "w+"), indent=2)
 
 
 def label_file_for_repo(repo):
@@ -98,10 +104,40 @@ def dump_labels(repo):
     json.dump(labels, open(label_file_for_repo(repo), "w+"), indent=2)
 
 
-def update():
-    dump_issues()
+def update(full_update=False):
+    if full_update:
+        db_time = None
+        issues = []
+    else:
+        with open(all_issues_file) as issues_db:
+            issues = json.load(issues_db)
+        url_to_issue = {}
+        latest_change = None
+        for issue_index in range(len(issues)):
+            issue  = issues[issue_index]
+            url_to_issue[issue_url(issue)] = issue_index
+            dt = parse_datetime(issue["updated_at"])
+            if latest_change == None or latest_change < dt:
+                latest_change = dt
+        db_time = latest_change.timestamp()
+
     for repo in REPOS:
-      dump_labels(repo)
+        new_issues = fetch_issues(repo, "", modified_after=db_time)
+        if full_update:
+            issues.extend(new_issues)
+        else:
+            for issue in new_issues:
+                url = issue_url(issue)
+                if url in url_to_issue:
+                    print("updating %s" % url)
+                    issues[url_to_issue.get(url)] = issue
+                else:
+                    print("new issue %s" % url)
+                    issues.append(issue)
+    json.dump(issues, open(all_issues_file, "w+"), indent=2)
+    for repo in REPOS:
+        dump_labels(repo)
+
 
 
 #
@@ -344,7 +380,10 @@ def main():
         description="Gather Bazel's issues and pull requests data")
     subparsers = parser.add_subparsers(dest="command", help="select a command")
 
-    subparsers.add_parser("update", help="update the datasets")
+    update_parser = subparsers.add_parser("update", help="update the datasets")
+    update_parser.add_argument(
+        "--full", action='store_true',
+        help="Do a full rather than incremental update")
 
     report_parser = subparsers.add_parser(
         "report", help="generate a full report")
@@ -387,7 +426,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "update":
-        update()
+        update(args.full)
     elif args.command == "report":
         report(args.report if args.report else list(reports.keys()))
     elif args.command == "garden":
