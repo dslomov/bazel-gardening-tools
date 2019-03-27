@@ -132,10 +132,12 @@ def print_report_group_by_team(issues, header, predicate, printer):
     print("---------------------------")
 
 
-def make_console_printer(show_number=True,
-                         show_url=True,
-                         show_title=False,
-                         show_teams=False):
+def make_console_printer(
+        show_age=False,
+        show_number=True,
+        show_url=True,
+        show_title=False,
+        show_teams=False):
     """A customizable console printer."""
 
     def truncate(string, length):
@@ -144,6 +146,8 @@ def make_console_printer(show_number=True,
     def printer(issue):
         output = []
 
+        if show_age:
+            output.append(("{: <4}", latest_update_days_ago(issue)))
         if show_number:
             output.append(("{: <4}", issue["number"]))
         if show_url:
@@ -255,7 +259,8 @@ def issues_to_garden(reporter, issues, stale_for_days):
         issues,
         header="Open issues not assigned to any team or person",
         predicate=predicate,
-        printer=make_console_printer(show_title=True))
+        printer=make_console_printer(
+            show_age=True, show_number=False, show_title=True))
 
 
 def pull_requests_to_garden(reporter, issues, stale_for_days):
