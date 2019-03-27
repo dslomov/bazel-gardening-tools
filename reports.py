@@ -3,9 +3,27 @@
 import collections
 import datetime
 import itertools
+import re
 import sys
 
 import database
+
+LINK_RE = re.compile(r'https?://[a-zA-Z0-9./-]*')
+
+CAT_2_TEAM = {
+    'category: BEP': 'team-Remote-Exec',
+    'category: correctness / reproducibility': 'team-Configurability',
+    'category: extensibility > toolchains': 'team-Configurability',
+    'category: local execution / caching': 'team-Local-Exec',
+    'category: misc > misc': 'team-Product',
+    'category: misc > release / binary': 'team-Product',
+    'category: misc > testing': 'team-Performance',
+    'category: rules > java': 'team-Rules-Java',
+    'category: rules > misc native': 'team-Rules-Server',
+    'category: rules > ObjC / iOS / J2ObjC': 'team-Apple',
+    'category: sandboxing': 'team-Local-Exec',
+    'category: skylark > pkg build defs': 'team-Rules-Server',
+}
 
 #
 # Helpers
@@ -174,66 +192,6 @@ def issues_without_team(reporter, issues):
     )
 
 
-
-class HTMLPrinter(object):
-
-  def __init__(self, out=sys.stdout):
-    self.out = out
-    self.in_row = False
-
-  def write(self, content):
-    self.out.write(content)
-
-  class _Row(object):
-    def __init__(self, owner, heading=False):
-      self.owner = owner
-      self.heading = heading
-
-    def __enter__(self):
-      self.owner.write('<tr>\n')
-      return self
-
-    def __exit__(self, unused_type, unused_value, unused_traceback):
-      self.owner.write('</tr>\n')
-
-    def Cell(self, content, make_link=True):
-      self.owner.write('  <td>' if not self.heading else '<th>')
-      one_line = len(content) < 70
-      if not one_line:
-        self.owner.write('\n    ')
-      self.owner.write(content)
-      if not one_line:
-        self.owner.write('\n  ')
-      self.owner.write('</td>\n' if not self.heading else '</th>\n')
-
-  def Row(self, heading=False):
-    return HTMLPrinter._Row(self, heading=heading)
-
-
-
-def issues_with_category(reporter, issues):
-    c_groups = collections.defaultdict(list)
-    predicate = lambda issue: is_open(issue) and not (
-        has_team_label(issue) or has_label(issue, "release"))
-    for issue in filter(predicate, issues):
-        categories = category_labels(issue["labels"])
-        if not categories:
-            categories = ["uncategorized"]
-        for c in categories:
-            c_groups[c].append(issue)
-
-    p = HTMLPrinter()
-    for category in c_groups.keys():
-       # print("------------------------")
-       # print("Category: %s (%d issues)" % (category, len(c_groups[category])))
-       for issue in c_groups[category]:
-           with p.Row() as row:
-               row.Cell(category),
-               row.Cell(issue_url(issue))
-               row.Cell(str(latest_update_days_ago(issue)))
-               row.Cell(issue["title"])
-
-
 def more_than_one_team(reporter, issues):
     def predicate(issue):
         return is_open(issue) and len(list(teams(issue))) > 1
@@ -257,6 +215,219 @@ def have_team_no_untriaged_no_priority(reporter, issues):
                                 and not is_pull_request(issue),
         printer=make_console_printer(show_teams=True))
 
+
+
+class HTMLPrinter(object):
+
+  def __init__(self, out=sys.stdout):
+    self.out = out
+    self.in_row = False
+
+  def write(self, content):
+    self.out.write(content)
+
+  def nl(self):
+    self.out.write('<br/>')
+
+  def preamble(self, css):
+    self.write('<!DOCTYPE html>\n<html lang="en">')
+    self.write('<head>\n')
+    self.write('<meta charset="utf-8">\n')
+    if css:
+      self.write('<style>\n')
+      self.write(css)
+      self.write('</style>\n')
+
+  def done(self):
+    self.write('</html>\n')
+
+
+  def B(self, content):
+      return ''.join(['<b>', content, '</b>'])
+
+  class Div(object):
+    def __init__(self, parent, css_class):
+      self.parent = parent
+      self.css_class = css_class
+
+    def __enter__(self):
+      self.parent.write('<div class="%s">' % self.css_class)
+      return self
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+      self.parent.write('</div>')
+
+  def div(self, css_class):
+      return HTMLPrinter.Div(self, css_class)
+
+
+  class TableRow(object):
+
+    def __init__(self, parent, heading=False):
+      self.parent = parent
+      self.heading = heading
+
+    def write(self, content):
+      self.parent.write(content)
+
+    def __enter__(self):
+      self.write('<tr>\n')
+      return self
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+      self.write('</tr>\n')
+
+    def cell(self, content, rowspan=None, colspan=None, css_class=None,
+             make_links=True):
+      with HTMLPrinter.TableCell(
+          self, rowspan=rowspan, colspan=colspan, css_class=css_class,
+          make_links=make_links) as c:
+        c.write(content)
+
+
+  class TableCell(object):
+
+    def __init__(self, parent, rowspan=None, colspan=None, css_class=None,
+                 make_links=True):
+      self.parent = parent
+      self.rowspan = rowspan
+      self.colspan = colspan
+      self.css_class = css_class
+      self.make_links = make_links
+
+    def write(self, content, css_class=None):
+      if self.make_links:
+        pos = 0
+        while True:
+          m = LINK_RE.search(content, pos)
+          if not m:
+            break
+          txt = m.group(0)
+          if txt.startswith('https://github.com/bazelbuild'):
+            txt = txt[29:]
+          link = '<a href="%s" target=_none>%s</a>' % (m.group(0), txt)
+          content = content[0:m.start()] + link + content[m.end():]
+          pos = m.start() + len(link)
+
+      if css_class:
+        self.write('<div class="%s">' % self.css_class)
+      one_line = len(content) < 70
+      if not one_line:
+        self.write('\n    ')
+      self.parent.write(content.replace('\r', '').replace('\n', '<br/>'))
+      if not one_line:
+        self.write('\n  ')
+      if css_class:
+        self.write('</div>')
+
+    def __enter__(self):
+      tag = 'td' if not self.parent.heading else 'th'
+      if self.rowspan:
+        tag = tag + ' rowspan="%d"' % self.rowspan
+      if self.colspan:
+        tag = tag + ' colspan="%d"' % self.colspan
+      # write through parent to avoid link expand
+      self.parent.write('  <%s>' % tag)
+      if self.css_class:
+        self.write('<div class="%s">' % self.css_class)
+      return self
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+      if self.css_class:
+        self.write('</div>')
+      self.parent.write('</td>\n' if not self.parent.heading else '</th>\n')
+
+
+  class Table(object):
+    def __init__(self, parent):
+      self.parent = parent
+
+    def write(self, content):
+      self.parent.write(content)
+
+    def __enter__(self):
+      self.write('<table>\n')
+      return self
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+      self.write('</table>\n')
+
+    def row(self, heading=False):
+      return HTMLPrinter.TableRow(self.parent, heading=heading)
+
+  def table(self):
+      return HTMLPrinter.Table(self)
+
+
+def issues_with_category(reporter, issues):
+    c_groups = collections.defaultdict(list)
+    predicate = lambda issue: is_open(issue) and not (
+        has_team_label(issue) or has_label(issue, "release"))
+    for issue in filter(predicate, issues):
+        categories = category_labels(issue["labels"])
+        if not categories:
+            categories = ["uncategorized"]
+        for c in categories:
+            c_groups[c].append(issue)
+
+    p = HTMLPrinter()
+    p.preamble(
+        """
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            vertical-align: top;
+        }
+        th, td {
+            padding: 5px;
+            text-align: left;
+        }
+        div.issue_text {
+            max-width: 50em;
+            padding: 5px;
+            text-align: left;
+            word-wrap: break-word;
+        }
+        """)
+    for category in c_groups.keys():
+        p.write(p.B('Category: %s (%d issues)' % (category, len(c_groups[category]))))
+        with p.table() as table:
+            with table.row(heading=True) as row:
+                row.cell('Issue')
+                row.cell('Age')
+                row.cell('Description')
+            for issue in sorted(
+                c_groups[category],
+                reverse=True,
+                key=lambda issue: latest_update_days_ago(issue)):
+                with table.row() as row:
+                    row.cell(issue_url(issue), rowspan=2)
+                    with HTMLPrinter.TableCell(row,
+                                               css_class='issue_text') as c:
+                        c.write(p.B(issue["title"]))
+                        c.write('&nbsp;')
+                        c.write('&nbsp;')
+                        c.write('&nbsp;')
+                        c.write('&nbsp;')
+                    with HTMLPrinter.TableCell(row, rowspan=2) as c:
+                        c.write(p.B('%d days old'
+                                    % latest_update_days_ago(issue)))
+                        p.nl();
+                        p.nl();
+                        c.write(p.B('Categories:'))
+                        p.nl();
+                        for cat in category_labels(issue["labels"]):
+                          c.write(cat)
+                          p.nl();
+                        for cat in category_labels(issue["labels"]):
+                          proposed_team = CAT_2_TEAM.get(cat)
+                          if proposed_team:
+                            p.nl();
+                            c.write('TODO[Move to %s button]' % proposed_team)
+
+                with table.row() as row:
+                    row.cell(issue["body"], css_class='issue_text')
+    p.done()
 
 _REPORTS = {
     "more_than_one_team":
