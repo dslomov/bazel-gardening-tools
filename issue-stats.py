@@ -62,13 +62,16 @@ def fetch_issues(repo, query, modified_after=None):
       modified_after: (float) only fetch issues modified after this (UTC) time.
     """
     query_args = [
+        'state=all',  # needed to get closed issues
         'per_page=100',
     ]
     if query:
         query_args.append(query)
     if modified_after:
-        query_args.append('since=%s' % datetime.datetime.utcfromtimestamp(
-            modified_after).strftime('%Y-%m-%dT%H:%M:%SZ'))
+        utc_time_s = datetime.datetime.utcfromtimestamp(
+            modified_after).strftime('%Y-%m-%dT%H:%M:%SZ')
+        query_args.append('since=%s' % utc_time_s)
+        print('Fecthing issues changed since: %s' % utc_time_s)
     url = GITHUB_API_URL_BASE + repo + '/issues?' + '&'.join(query_args)
     result = dict()
     i = 0
@@ -106,16 +109,18 @@ def update(full_update=False):
         db_time = None
         issues = []
     else:
-        # Notice the hackery. We ask for 10 minutes before the mod time so we
-        # pick up issues that were modified *during* the last time we queried.
-        # We could do better by finding the highest mod time in the database.
-        db_time = os.path.getmtime(all_issues_file) - 600
         with open(all_issues_file) as issues_db:
             issues = json.load(issues_db)
         url_to_issue = {}
+        latest_change = None
         for issue_index in range(len(issues)):
             issue  = issues[issue_index]
             url_to_issue[issue_url(issue)] = issue_index
+            dt = parse_datetime(issue["updated_at"])
+            if latest_change == None or latest_change < dt:
+                latest_change = dt
+        db_time = latest_change.timestamp()
+
     for repo in REPOS:
         new_issues = fetch_issues(repo, "", modified_after=db_time)
         if full_update:
