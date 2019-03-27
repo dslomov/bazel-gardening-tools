@@ -53,7 +53,7 @@ def get_next_url(response):
     return None
 
 
-def fetch_issues(repo, query, type='issues', modified_after=None):
+def fetch_issues(repo, query, modified_after=None):
     """Fetches issues from a repo.
 
     Args:
@@ -62,19 +62,21 @@ def fetch_issues(repo, query, type='issues', modified_after=None):
       modified_after: (float) only fetch issues modified after this (UTC) time.
     """
     query_args = [
+        'state=all',  # needed to get closed issues
         'per_page=100',
     ]
     if query:
         query_args.append(query)
     if modified_after:
-        query_args.append('since=%s' % datetime.datetime.utcfromtimestamp(
-            modified_after).strftime('%Y-%m-%dT%H:%M:%SZ'))
-    url = GITHUB_API_URL_BASE + repo + '/' + type + '?' + '&'.join(query_args)
+        utc_time_s = datetime.datetime.utcfromtimestamp(
+            modified_after).strftime('%Y-%m-%dT%H:%M:%SZ')
+        query_args.append('since=%s' % utc_time_s)
+        print('Fecthing issues changed since: %s' % utc_time_s)
+    url = GITHUB_API_URL_BASE + repo + '/issues?' + '&'.join(query_args)
     result = dict()
     i = 0
     while url:
         print(url)
-        print(add_client_secret(url))
         response = urllib.request.urlopen(add_client_secret(url))
         issues = json.loads(response.read())
         for issue in issues:
@@ -117,11 +119,10 @@ def update(full_update=False):
             dt = parse_datetime(issue["updated_at"])
             if latest_change == None or latest_change < dt:
                 latest_change = dt
-        db_time = latest_change.timestamp() - 60 * 60 * 24 * 5
+        db_time = latest_change.timestamp()
 
     for repo in REPOS:
-      for type in ['issues', 'pulls']:
-        new_issues = fetch_issues(repo, "", type=type, modified_after=db_time)
+        new_issues = fetch_issues(repo, "", modified_after=db_time)
         if full_update:
             issues.extend(new_issues)
         else:
