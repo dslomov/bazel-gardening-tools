@@ -3,6 +3,7 @@
 import collections
 import datetime
 import itertools
+import sys
 
 import database
 
@@ -173,6 +174,43 @@ def issues_without_team(reporter, issues):
     )
 
 
+
+class HTMLPrinter(object):
+
+  def __init__(self, out=sys.stdout):
+    self.out = out
+    self.in_row = False
+
+  def write(self, content):
+    self.out.write(content)
+
+  class _Row(object):
+    def __init__(self, owner, heading=False):
+      self.owner = owner
+      self.heading = heading
+
+    def __enter__(self):
+      self.owner.write('<tr>\n')
+      return self
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+      self.owner.write('</tr>\n')
+
+    def Cell(self, content, make_link=True):
+      self.owner.write('  <td>' if not self.heading else '<th>')
+      one_line = len(content) < 70
+      if not one_line:
+        self.owner.write('\n    ')
+      self.owner.write(content)
+      if not one_line:
+        self.owner.write('\n  ')
+      self.owner.write('</td>\n' if not self.heading else '</th>\n')
+
+  def Row(self, heading=False):
+    return HTMLPrinter._Row(self, heading=heading)
+
+
+
 def issues_with_category(reporter, issues):
     c_groups = collections.defaultdict(list)
     predicate = lambda issue: is_open(issue) and not (
@@ -184,15 +222,16 @@ def issues_with_category(reporter, issues):
         for c in categories:
             c_groups[c].append(issue)
 
+    p = HTMLPrinter()
     for category in c_groups.keys():
        # print("------------------------")
        # print("Category: %s (%d issues)" % (category, len(c_groups[category])))
        for issue in c_groups[category]:
-           print("%s|%s|%d|%s" % (
-               category,
-               issue_url(issue),
-               latest_update_days_ago(issue),
-               issue["title"]))
+           with p.Row() as row:
+               row.Cell(category),
+               row.Cell(issue_url(issue))
+               row.Cell(str(latest_update_days_ago(issue)))
+               row.Cell(issue["title"])
 
 
 def more_than_one_team(reporter, issues):
