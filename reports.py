@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import collections
 import datetime
 import itertools
 
@@ -25,6 +26,13 @@ def team_labels(labels):
             yield l
 
 
+def category_labels(labels):
+    for l in labels:
+        name = l["name"]
+        if name.startswith("category:"):
+            yield name
+
+
 def all_teams(labels):
     for team_label in team_labels(labels):
         yield team_label["name"]
@@ -33,8 +41,11 @@ def all_teams(labels):
 #
 # Issue predicates
 #
+
+
 def is_open(issue):
     return issue["state"] == "open"
+
 
 def has_team_label(issue):
     for _ in team_labels(issue["labels"]):
@@ -152,9 +163,32 @@ def issues_without_team(reporter, issues):
     reporter(
         issues,
         header="Open issues not assigned to any team",
-        predicate=lambda issue: is_open(issue) and not has_team_label(issue),
+        predicate=lambda issue: is_open(issue) and not (
+            has_team_label(issue) or has_label(issue, 'release')),
         printer=make_console_printer(show_title=True),
     )
+
+
+def issues_with_category(reporter, issues):
+    c_groups = collections.defaultdict(list)
+    predicate = lambda issue: is_open(issue) and not (
+        has_team_label(issue) or has_label(issue, "release"))
+    for issue in filter(predicate, issues):
+        categories = category_labels(issue["labels"])
+        if not categories:
+            categories = ["uncategorized"]
+        for c in categories:
+            c_groups[c].append(issue)
+
+    for category in c_groups.keys():
+       # print("------------------------")
+       # print("Category: %s (%d issues)" % (category, len(c_groups[category])))
+       for issue in c_groups[category]:
+           print("%s|%s|%d|%s" % (
+               category,
+               issue_url(issue),
+               latest_update_days_ago(issue),
+               issue["title"]))
 
 
 def more_than_one_team(reporter, issues):
@@ -183,14 +217,16 @@ def have_team_no_untriaged_no_priority(reporter, issues):
 
 _REPORTS = {
     "more_than_one_team":
-    lambda issues: more_than_one_team(print_report, issues),
+        lambda issues: more_than_one_team(print_report, issues),
     "issues_without_team":
-    lambda issues: issues_without_team(print_report, issues),
+        lambda issues: issues_without_team(print_report, issues),
     "triaged_no_priority":
-    lambda issues: have_team_no_untriaged_no_priority(
-        print_report_group_by_team, issues)
+        lambda issues: have_team_no_untriaged_no_priority(
+            print_report_group_by_team, issues),
+    "unmigrated":
+        lambda issues: issues_with_category(print_report, issues),
 }
-
+        
 
 def Report(which_reports):
     issues = database.GetIssues()
