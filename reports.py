@@ -216,6 +216,26 @@ def have_team_no_untriaged_no_priority(reporter, issues):
         printer=make_console_printer(show_teams=True))
 
 
+_REPORTS = {
+    "more_than_one_team":
+        lambda issues: more_than_one_team(print_report, issues),
+    "issues_without_team":
+        lambda issues: issues_without_team(print_report, issues),
+    "triaged_no_priority":
+        lambda issues: have_team_no_untriaged_no_priority(
+            print_report_group_by_team, issues),
+}
+
+
+def report(which_reports):
+    issues = database.GetIssues()
+    for r in which_reports:
+        _REPORTS[r](issues)
+
+
+def ReportNames():
+    return _REPORTS.keys()
+
 
 class HTMLPrinter(object):
 
@@ -359,7 +379,8 @@ class HTMLPrinter(object):
       return HTMLPrinter.Table(self)
 
 
-def issues_with_category(reporter, issues):
+def html_garden():
+    issues = database.GetIssues()
     c_groups = collections.defaultdict(list)
     predicate = lambda issue: is_open(issue) and not (
         has_team_label(issue) or has_label(issue, "release"))
@@ -429,28 +450,6 @@ def issues_with_category(reporter, issues):
                     row.cell(issue["body"], css_class='issue_text')
     p.done()
 
-_REPORTS = {
-    "more_than_one_team":
-        lambda issues: more_than_one_team(print_report, issues),
-    "issues_without_team":
-        lambda issues: issues_without_team(print_report, issues),
-    "triaged_no_priority":
-        lambda issues: have_team_no_untriaged_no_priority(
-            print_report_group_by_team, issues),
-    "unmigrated":
-        lambda issues: issues_with_category(print_report, issues),
-}
-        
-
-def Report(which_reports):
-    issues = database.GetIssues()
-    for r in which_reports:
-        _REPORTS[r](issues)
-
-
-def ReportNames():
-    return _REPORTS.keys()
-
 
 #
 # Gardening
@@ -491,7 +490,7 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
             show_age=True, show_number=False, show_title=True))
 
 
-def Garden(list_issues, list_pull_requests, stale_for_days):
+def garden(list_issues, list_pull_requests, stale_for_days):
     # We are only gardening open issues
     issues = database.GetIssues(is_open)
     if list_issues:
