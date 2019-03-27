@@ -277,7 +277,8 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
         issues,
         header="Open pull requests not assigned to any team or person",
         predicate=predicate,
-        printer=make_console_printer(show_title=True))
+        printer=make_console_printer(
+            show_age=True, show_number=False, show_title=True))
 
 
 def Garden(list_issues, list_pull_requests, stale_for_days):
