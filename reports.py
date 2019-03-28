@@ -241,6 +241,8 @@ def ReportNames():
 
 class HTMLPrinter(object):
 
+  SPACE = '&nbsp;'
+
   def __init__(self, out=sys.stdout):
     self.out = out
     self.in_row = False
@@ -263,10 +265,16 @@ class HTMLPrinter(object):
   def done(self):
     self.write('</html>\n')
 
-  def B(self, content):
-      return ''.join(['<b>', content, '</b>'])
+  @staticmethod
+  def B(content):
+    return ''.join(['<b>', content, '</b>'])
 
-  def Link(self, content, link):
+  @staticmethod
+  def space(n):
+    return HTMLPrinter.SPACE * n
+
+  @staticmethod
+  def Link(content, link):
       return '<a href="%s" target=_none>%s</a>' % (link, content)
 
   class Div(object):
@@ -430,8 +438,7 @@ def html_garden():
                     with HTMLPrinter.TableCell(row,
                                                css_class='issue_text') as c:
                         c.write(p.B(issue['title']))
-                        c.write('&nbsp;')
-                        c.write('&nbsp;')
+                        c.write(p.space(5))
                         # TODO(aiuto): If they are a Googler, put a G logo next to them.
                         # This is availble through github.corp.google.com API.
                         user =  database.created_by(issue)
@@ -441,17 +448,30 @@ def html_garden():
                                     % latest_update_days_ago(issue)))
                         p.nl();
                         p.nl();
-
                         priority = get_priority(issue)
                         if priority:
                           c.write(p.B('Priority: %s' % priority))
                           p.nl();
+
+                        p.nl();
+                        c.write(p.B('Assignees:'))
+                        assignees = issue['assignees']
+                        if len(assignees) > 0:
+                          for user_data in assignees:
+                            user = database.User(user_data)
+                            p.nl();
+                            c.write(p.space(5))
+                            c.write(p.Link(user.name, user.link))
+                        else: 
+                          c.write(' &lt;unassigned&gt;')
+                        p.nl();
 
                         c.write(p.B('Labels:'))
                         p.nl();
                         for label in issue['labels']:
                           name = label['name']
                           if not (name.startswith('P') and len(name) == 2):
+                            c.write(p.space(5))
                             c.write(name)
                             p.nl();
 
