@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import collections
 import datetime
 import json
 
@@ -43,3 +44,61 @@ class User(object):
    @property
    def link(self):
      return self.data['html_url']
+
+
+#
+# Label helpers
+#
+
+PRIMARY_LABEL_DB = 'labels.bazel.json'
+
+Label = collections.namedtuple('Label', ['key', 'name', 'color', 'url'])
+
+class LabelDB(object):
+  """LabelsDB implements a collection of labels.
+
+  The intent is that the color choices for main repo win over those in the
+  secondary ones. To accomplish that we preload the labels from the main
+  repo and add new ones lazily as we encounter them.
+  """
+
+  def __init__(self, db_file):
+    self.key_to_label = {}
+    self._load(db_file)
+
+  def _load(self, db_file):
+    with open(db_file, 'r') as dbf:
+      labels = json.load(dbf)
+      for label in labels:
+        self._insert(label)
+
+  def _insert(self, label):
+    """Inserts a new label from the raw json struct."""
+    name = label['name']
+    key = self._normalize(name)
+    label = Label(
+        key=key,
+        name=name,
+        color=label['color'],
+        url=label['url'],
+    )
+    self.key_to_label[key] = label
+    return label
+
+  @staticmethod
+  def _normalize(name):
+    return ''.join(filter(lambda ch: ch.isalnum(), name.lower()))
+
+  def get(self, label):
+    key = self._normalize(label['name'])
+    ret = self.key_to_label.get(key)
+    if not ret:
+      ret = self._insert(label)
+    return ret
+
+  def all(self):
+    return self.key_to_label.values()
+
+
+# export the singleton
+label_db = LabelDB(PRIMARY_LABEL_DB)

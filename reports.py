@@ -89,7 +89,7 @@ def has_label(issue, label):
 def get_any_of_labels(issue, labels):
     for l in issue["labels"]:
         if l["name"] in labels:
-            return l["name"]
+            return l
     return None
 
 
@@ -395,6 +395,11 @@ class HTMLPrinter(object):
       return HTMLPrinter.Table(self)
 
 
+def label_html(label):
+  """Returns html for rendering a Label."""
+  return '<span class="label-%s">%s</span>' % (label.key, label.name)
+
+
 def html_garden():
     issues = database.get_issues()
     c_groups = collections.defaultdict(list)
@@ -408,8 +413,7 @@ def html_garden():
             c_groups[c].append(issue)
 
     p = HTMLPrinter()
-    p.preamble(
-        """
+    css = """
         table, th, td {
             border: 1px solid black;
             border-collapse: collapse;
@@ -425,7 +429,12 @@ def html_garden():
             text-align: left;
             word-wrap: break-word;
         }
-        """)
+        """
+    for label in database.label_db.all():
+      css += """span.label-%s {
+          background-color: #%s;
+      }\n""" % (label.key, label.color)
+    p.preamble(css)
     for category in c_groups.keys():
         p.write(p.B('Category: %s (%d issues)' % (category, len(c_groups[category]))))
         with p.table() as table:
@@ -454,7 +463,8 @@ def html_garden():
                         p.nl();
                         priority = get_priority(issue)
                         if priority:
-                          c.write(p.B('Priority: %s' % priority))
+                          l = database.label_db.get(priority)
+                          c.write(p.B('Priority: %s' % label_html(l)))
                           p.nl();
 
                         p.nl();
@@ -476,7 +486,7 @@ def html_garden():
                           name = label['name']
                           if not (name.startswith('P') and len(name) == 2):
                             c.write(p.space(5))
-                            c.write(name)
+                            c.write(label_html(database.label_db.get(label)))
                             p.nl();
 
                         for cat in category_labels(issue['labels']):

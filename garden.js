@@ -25,7 +25,7 @@ var addLabel = function(issue_url, label) {
 };
 
 var removeLabel = function(issue_url, label) {
-  alert('Remove label: ' + label);
+  console.log('Remove label: ' + label);
 };
 
 replaceLabel = function(issue_url, oldLabel, newLabel) {
