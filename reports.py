@@ -463,7 +463,7 @@ def html_garden():
                             c.write(p.space(5))
                             c.write(p.Link(user.name, user.link))
                         else: 
-                          c.write(' &lt;unassigned&gt;')
+                          c.write(' [unassigned];')
                         p.nl();
 
                         c.write(p.B('Labels:'))
