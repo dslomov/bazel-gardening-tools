@@ -314,7 +314,7 @@ class HTMLPrinter(object):
       self.write('</tr>\n')
 
     def cell(self, content, rowspan=None, colspan=None, css_class=None,
-             make_links=True):
+             make_links=False):
       with HTMLPrinter.TableCell(
           self, rowspan=rowspan, colspan=colspan, css_class=css_class,
           make_links=make_links) as c:
@@ -324,7 +324,7 @@ class HTMLPrinter(object):
   class TableCell(object):
 
     def __init__(self, parent, rowspan=None, colspan=None, css_class=None,
-                 make_links=True):
+                 make_links=False):
       self.parent = parent
       self.rowspan = rowspan
       self.colspan = colspan
@@ -438,7 +438,7 @@ def html_garden():
                 reverse=True,
                 key=lambda issue: latest_update_days_ago(issue)):
                 with table.row() as row:
-                    row.cell(issue_url(issue), rowspan=2)
+                    row.cell(issue_url(issue), rowspan=2, make_links=True)
                     with HTMLPrinter.TableCell(row,
                                                css_class='issue_text') as c:
                         c.write(p.B(issue['title']))
@@ -483,11 +483,16 @@ def html_garden():
                           proposed_team = CAT_2_TEAM.get(cat)
                           if proposed_team:
                             p.nl();
-                            c.write('<button onclick="replaceLabel(\'%s\', \'%s\')">Move do %s</button>' % (
-                                cat, proposed_team, proposed_team))
+                            c.write(
+                                """<button onclick="replaceLabel('%s', '%s', '%s')">"""
+                                """Move to %s"""
+                                """</button>""" % (
+                                    issue['url'], cat, proposed_team,
+                                    proposed_team))
 
                 with table.row() as row:
-                    row.cell(issue['body'], css_class='issue_text')
+                    row.cell(issue['body'], css_class='issue_text',
+                             make_links=True)
     p.done()
 
 
