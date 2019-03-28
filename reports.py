@@ -3,10 +3,13 @@
 import collections
 import datetime
 import itertools
+import os
 import re
 import sys
 
 import database
+
+HTML_SCRIPT_CODE = 'garden.js'
 
 LINK_RE = re.compile(r'https?://[a-zA-Z0-9./-]*')
 
@@ -261,6 +264,10 @@ class HTMLPrinter(object):
       self.write('<style>\n')
       self.write(css)
       self.write('</style>\n')
+    if os.path.exists(HTML_SCRIPT_CODE):
+      with open(HTML_SCRIPT_CODE) as inp:
+        self.write(inp.read())
+      
 
   def done(self):
     self.write('</html>\n')
@@ -479,7 +486,8 @@ def html_garden():
                           proposed_team = CAT_2_TEAM.get(cat)
                           if proposed_team:
                             p.nl();
-                            c.write('TODO[Move to %s button]' % proposed_team)
+                            c.write('<button onclick="replaceLabel(\'%s\', \'%s\')">Move do %s</button>' % (
+                                cat, proposed_team, proposed_team))
 
                 with table.row() as row:
                     row.cell(issue['body'], css_class='issue_text')
