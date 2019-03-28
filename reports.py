@@ -83,16 +83,18 @@ def has_label(issue, label):
     return False
 
 
-def has_any_of_labels(issue, labels):
+def get_any_of_labels(issue, labels):
     for l in issue["labels"]:
         if l["name"] in labels:
-            return True
-    return False
+            return l["name"]
+    return None
 
 
 def has_priority(issue):
-    return has_any_of_labels(issue, ["P0", "P1", "P2", "P3", "P4"])
+    return get_any_of_labels(issue, ["P0", "P1", "P2", "P3", "P4"]) != None
 
+def get_priority(issue):
+    return get_any_of_labels(issue, ["P0", "P1", "P2", "P3", "P4"])
 
 def needs_more_data(issue):
     return has_label(issue, "more data needed")
@@ -427,7 +429,7 @@ def html_garden():
                     row.cell(issue_url(issue), rowspan=2)
                     with HTMLPrinter.TableCell(row,
                                                css_class='issue_text') as c:
-                        c.write(p.B(issue["title"]))
+                        c.write(p.B(issue['title']))
                         c.write('&nbsp;')
                         c.write('&nbsp;')
                         # TODO(aiuto): If they are a Googler, put a G logo next to them.
@@ -439,19 +441,28 @@ def html_garden():
                                     % latest_update_days_ago(issue)))
                         p.nl();
                         p.nl();
-                        c.write(p.B('Categories:'))
-                        p.nl();
-                        for cat in category_labels(issue["labels"]):
-                          c.write(cat)
+
+                        priority = get_priority(issue)
+                        if priority:
+                          c.write(p.B('Priority: %s' % priority))
                           p.nl();
-                        for cat in category_labels(issue["labels"]):
+
+                        c.write(p.B('Labels:'))
+                        p.nl();
+                        for label in issue['labels']:
+                          name = label['name']
+                          if not (name.startswith('P') and len(name) == 2):
+                            c.write(name)
+                            p.nl();
+
+                        for cat in category_labels(issue['labels']):
                           proposed_team = CAT_2_TEAM.get(cat)
                           if proposed_team:
                             p.nl();
                             c.write('TODO[Move to %s button]' % proposed_team)
 
                 with table.row() as row:
-                    row.cell(issue["body"], css_class='issue_text')
+                    row.cell(issue['body'], css_class='issue_text')
     p.done()
 
 
