@@ -228,7 +228,7 @@ _REPORTS = {
 
 
 def report(which_reports):
-    issues = database.GetIssues()
+    issues = database.get_issues()
     for r in which_reports:
         _REPORTS[r](issues)
 
@@ -261,9 +261,11 @@ class HTMLPrinter(object):
   def done(self):
     self.write('</html>\n')
 
-
   def B(self, content):
       return ''.join(['<b>', content, '</b>'])
+
+  def Link(self, content, link):
+      return '<a href="%s" target=_none>%s</a>' % (link, content)
 
   class Div(object):
     def __init__(self, parent, css_class):
@@ -316,7 +318,7 @@ class HTMLPrinter(object):
       self.make_links = make_links
 
     def write(self, content, css_class=None):
-      if self.make_links:
+      if self.make_links and content.find('<a href') < 0:
         pos = 0
         while True:
           m = LINK_RE.search(content, pos)
@@ -380,7 +382,7 @@ class HTMLPrinter(object):
 
 
 def html_garden():
-    issues = database.GetIssues()
+    issues = database.get_issues()
     c_groups = collections.defaultdict(list)
     predicate = lambda issue: is_open(issue) and not (
         has_team_label(issue) or has_label(issue, "release"))
@@ -428,8 +430,10 @@ def html_garden():
                         c.write(p.B(issue["title"]))
                         c.write('&nbsp;')
                         c.write('&nbsp;')
-                        c.write('&nbsp;')
-                        c.write('&nbsp;')
+                        # TODO(aiuto): If they are a Googler, put a G logo next to them.
+                        # This is availble through github.corp.google.com API.
+                        user =  database.created_by(issue)
+                        c.write(p.Link(user.name, user.link))
                     with HTMLPrinter.TableCell(row, rowspan=2) as c:
                         c.write(p.B('%d days old'
                                     % latest_update_days_ago(issue)))
@@ -492,7 +496,7 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
 
 def garden(list_issues, list_pull_requests, stale_for_days):
     # We are only gardening open issues
-    issues = database.GetIssues(is_open)
+    issues = database.get_issues(is_open)
     if list_issues:
         issues_to_garden(print_report, issues, stale_for_days)
     if list_pull_requests:
