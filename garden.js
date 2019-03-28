@@ -1,4 +1,3 @@
-<script>
 function addLabel(labels) {
 	alert('Assign label: ' + labels);
 }
@@ -10,4 +9,3 @@ function removeLabel(label) {
 function replaceLabel(oldLabel, newLabel) {
 	alert('Replace ' + oldLabel + ' with ' + newLabel);
 }
-</script>

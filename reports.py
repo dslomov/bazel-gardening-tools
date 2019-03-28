@@ -264,10 +264,7 @@ class HTMLPrinter(object):
       self.write('<style>\n')
       self.write(css)
       self.write('</style>\n')
-    if os.path.exists(HTML_SCRIPT_CODE):
-      with open(HTML_SCRIPT_CODE) as inp:
-        self.write(inp.read())
-      
+    self.write('<script type="text/javascript" src="%s"></script>\n' % HTML_SCRIPT_CODE)
 
   def done(self):
     self.write('</html>\n')
