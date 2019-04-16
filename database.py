@@ -87,9 +87,19 @@ class LabelDB(object):
 
   @staticmethod
   def _normalize(name):
+    """The compare key for labels is alphanumeric only, with no punctuation.
+    
+    This accounts for minor punctuation differences between projects.
+    """
     return ''.join(filter(lambda ch: ch.isalnum(), name.lower()))
 
   def get(self, label):
+    """Gets the Label struct for a given label name.
+
+    Args:
+      label: a label name. If the name is not in the database, a new Label
+          object is created and that is returned.
+    """
     key = self._normalize(label['name'])
     ret = self.key_to_label.get(key)
     if not ret:
