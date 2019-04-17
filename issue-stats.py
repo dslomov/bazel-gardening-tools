@@ -47,7 +47,7 @@ def update(full_update=False):
         for issue_index in range(len(issues)):
             issue  = issues[issue_index]
             url_to_issue[issue['url']] = issue_index
-            dt = database.UpdateTime(issue)
+            dt = database.update_time(issue)
             if latest_change == None or latest_change < dt:
                 latest_change = dt
         db_time = latest_change.timestamp()
