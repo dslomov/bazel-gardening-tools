@@ -233,7 +233,7 @@ _REPORTS = {
         
 
 def Report(which_reports):
-    issues = database.GetIssues()
+    issues = database.get_issues()
     for r in which_reports:
         _REPORTS[r](issues)
 
@@ -283,7 +283,7 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
 
 def Garden(list_issues, list_pull_requests, stale_for_days):
     # We are only gardening open issues
-    issues = database.GetIssues(is_open)
+    issues = database.get_issues(is_open)
     if list_issues:
         issues_to_garden(print_report, issues, stale_for_days)
     if list_pull_requests:
