@@ -476,7 +476,7 @@ def html_garden():
                             p.nl();
                             c.write(p.space(5))
                             c.write(p.Link(user.name, user.link))
-                        else: 
+                        else:
                           c.write(' [unassigned];')
                         p.nl();
 
