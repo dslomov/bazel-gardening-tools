@@ -67,10 +67,13 @@ class LabelDB(object):
     self._load(db_file)
 
   def _load(self, db_file):
-    with open(db_file, 'r') as dbf:
-      labels = json.load(dbf)
-      for label in labels:
-        self._insert(label)
+    try:
+      with open(db_file, 'r') as dbf:
+        labels = json.load(dbf)
+        for label in labels:
+          self._insert(label)
+    except FileNotFoundError:
+      pass
 
   def _insert(self, label):
     """Inserts a new label from the raw json struct."""
