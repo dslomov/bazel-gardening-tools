@@ -9,10 +9,18 @@ import reports
 
 
 REPOS = [
-  'bazelbuild/starlark',
-  'bazelbuild/bazel-website',
-  'bazelbuild/bazel-skylib',
+  'bazelbuild/apple_support',
   'bazelbuild/bazel',
+  'bazelbuild/bazel-blog',
+  'bazelbuild/bazel-federation',
+  'bazelbuild/bazel-skylib',
+  'bazelbuild/bazel-toolchains',
+  'bazelbuild/bazel-website',
+  'bazelbuild/buildtools',
+  'bazelbuild/codelabs',
+  'bazelbuild/examples',
+  'bazelbuild/skydoc',
+  'bazelbuild/starlark',
 ]
 
 
