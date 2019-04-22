@@ -6,6 +6,23 @@ import itertools
 import re
 
 import database
+import html_writer
+
+
+CAT_2_TEAM = {
+    'category: BEP': 'team-Remote-Exec',
+    'category: correctness / reproducibility': 'team-Configurability',
+    'category: extensibility > toolchains': 'team-Configurability',
+    'category: local execution / caching': 'team-Local-Exec',
+    'category: misc > misc': 'team-Product',
+    'category: misc > release / binary': 'team-Product',
+    'category: misc > testing': 'team-Performance',
+    'category: rules > java': 'team-Rules-Java',
+    'category: rules > misc native': 'team-Rules-Server',
+    'category: rules > ObjC / iOS / J2ObjC': 'team-Apple',
+    'category: sandboxing': 'team-Local-Exec',
+    'category: skylark > pkg build defs': 'team-Rules-Server',
+}
 
 #
 # Helpers
@@ -68,16 +85,18 @@ def has_label(issue, label):
     return False
 
 
-def has_any_of_labels(issue, labels):
+def get_any_of_labels(issue, labels):
     for l in issue["labels"]:
         if l["name"] in labels:
-            return True
-    return False
+            return l
+    return None
 
 
 def has_priority(issue):
-    return has_any_of_labels(issue, ["P0", "P1", "P2", "P3", "P4"])
+    return get_any_of_labels(issue, ["P0", "P1", "P2", "P3", "P4"]) != None
 
+def get_priority(issue):
+    return get_any_of_labels(issue, ["P0", "P1", "P2", "P3", "P4"])
 
 def needs_more_data(issue):
     return has_label(issue, "more data needed")
@@ -234,7 +253,7 @@ _REPORTS = {
     "unmigrated":
         lambda issues: issues_with_category(print_report, issues),
 }
-        
+
 
 def report(which_reports):
     issues = database.get_issues()
@@ -244,6 +263,117 @@ def report(which_reports):
 
 def report_names():
     return _REPORTS.keys()
+
+
+def label_html(label):
+  """Returns html for rendering a Label."""
+  return '<span class="label-%s">%s</span>' % (label.key, label.name)
+
+
+def html_garden():
+    issues = database.get_issues()
+    c_groups = collections.defaultdict(list)
+    predicate = lambda issue: is_open(issue) and not (
+        has_team_label(issue) or has_label(issue, "release"))
+    for issue in filter(predicate, issues):
+        categories = category_labels(issue["labels"])
+        if not categories:
+            categories = ["uncategorized"]
+        for c in categories:
+            c_groups[c].append(issue)
+
+    p = html_writer.HTMLWriter()
+    css = """
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            vertical-align: top;
+        }
+        th, td {
+            padding: 5px;
+            text-align: left;
+        }
+        div.issue_text {
+            max-width: 50em;
+            padding: 5px;
+            text-align: left;
+            word-wrap: break-word;
+        }
+        """
+    for label in database.label_db.all():
+      css += """span.label-%s {
+          background-color: #%s;
+      }\n""" % (label.key, label.color)
+    p.preamble(css)
+    for category in c_groups.keys():
+        p.write(p.B('Category: %s (%d issues)' % (category, len(c_groups[category]))))
+        with p.table() as table:
+            with table.row(heading=True) as row:
+                row.cell('Issue')
+                row.cell('Age')
+                row.cell('Description')
+            for issue in sorted(
+                c_groups[category],
+                reverse=True,
+                key=lambda issue: latest_update_days_ago(issue)):
+                with table.row() as row:
+                    row.cell(issue_url(issue), rowspan=2, make_links=True)
+                    with html_writer.HTMLWriter.TableCell(row,
+                                               css_class='issue_text') as c:
+                        c.write(p.B(issue['title']))
+                        c.write(p.space(5))
+                        # TODO(aiuto): If they are a Googler, put a G logo next to them.
+                        # This is availble through github.corp.google.com API.
+                        user =  database.created_by(issue)
+                        c.write(p.Link(user.name, user.link))
+                    with html_writer.HTMLWriter.TableCell(row, rowspan=2) as c:
+                        c.write(p.B('%d days old'
+                                    % latest_update_days_ago(issue)))
+                        p.nl();
+                        p.nl();
+                        priority = get_priority(issue)
+                        if priority:
+                          l = database.label_db.get(priority)
+                          c.write(p.B('Priority: %s' % label_html(l)))
+                          p.nl();
+
+                        p.nl();
+                        c.write(p.B('Assignees:'))
+                        assignees = issue['assignees']
+                        if len(assignees) > 0:
+                          for user_data in assignees:
+                            user = database.User(user_data)
+                            p.nl();
+                            c.write(p.space(5))
+                            c.write(p.Link(user.name, user.link))
+                        else:
+                          c.write(' [unassigned];')
+                        p.nl();
+
+                        c.write(p.B('Labels:'))
+                        p.nl();
+                        for label in issue['labels']:
+                          name = label['name']
+                          if not (name.startswith('P') and len(name) == 2):
+                            c.write(p.space(5))
+                            c.write(label_html(database.label_db.get(label)))
+                            p.nl();
+
+                        for cat in category_labels(issue['labels']):
+                          proposed_team = CAT_2_TEAM.get(cat)
+                          if proposed_team:
+                            p.nl();
+                            c.write(
+                                """<button onclick="replaceLabel('%s', '%s', '%s')">"""
+                                """Move to %s"""
+                                """</button>""" % (
+                                    issue['url'], cat, proposed_team,
+                                    proposed_team))
+
+                with table.row() as row:
+                    row.cell(issue['body'], css_class='issue_text',
+                             make_links=True)
+    p.done()
 
 
 #
