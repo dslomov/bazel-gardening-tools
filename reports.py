@@ -93,7 +93,7 @@ def get_any_of_labels(issue, labels):
 
 
 def has_priority(issue):
-    return get_any_of_labels(issue, ["P0", "P1", "P2", "P3", "P4"]) != None
+    return get_priority(issue) != None
 
 def get_priority(issue):
     return get_any_of_labels(issue, ["P0", "P1", "P2", "P3", "P4"])
