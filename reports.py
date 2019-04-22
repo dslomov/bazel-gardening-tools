@@ -232,13 +232,13 @@ _REPORTS = {
 }
         
 
-def Report(which_reports):
+def report(which_reports):
     issues = database.get_issues()
     for r in which_reports:
         _REPORTS[r](issues)
 
 
-def ReportNames():
+def report_names():
     return _REPORTS.keys()
 
 
@@ -281,7 +281,7 @@ def pull_requests_to_garden(reporter, issues, stale_for_days):
             show_age=True, show_number=False, show_title=True))
 
 
-def Garden(list_issues, list_pull_requests, stale_for_days):
+def garden(list_issues, list_pull_requests, stale_for_days):
     # We are only gardening open issues
     issues = database.get_issues(is_open)
     if list_issues:
