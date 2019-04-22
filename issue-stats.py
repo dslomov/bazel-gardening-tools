@@ -116,16 +116,16 @@ def main():
         "-r",
         "--report",
         action="append",
-        choices=reports.ReportNames(),
+        choices=reports.report_names(),
         help="show selected report (multiple values possible)")
     args = parser.parse_args()
 
     if args.command == "update":
         update(args.full)
     elif args.command == "report":
-        reports.Report(args.report if args.report else reports.ReportNames())
+        reports.report(args.report if args.report else reports.report_names())
     elif args.command == "garden":
-        reports.Garden(args.list_issues, args.list_pull_requests, args.stale_for_days)
+        reports.garden(args.list_issues, args.list_pull_requests, args.stale_for_days)
     else:
         parser.print_usage()
 
