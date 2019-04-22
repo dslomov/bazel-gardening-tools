@@ -106,7 +106,7 @@ def main():
     )
 
     html_parser = subparsers.add_parser(
-        "html", help="generate HTML for issues/pulls that need attention")
+        "html", help="generate HTML for issues/pull requests that need attention")
 
     report_selector = report_parser.add_mutually_exclusive_group()
     report_selector.add_argument(
