@@ -3,12 +3,16 @@
 import collections
 import datetime
 import itertools
+import re
 
 import database
 
 #
 # Helpers
 #
+
+# Look for WIP markers in issue titles
+_WIP_RE = re.compile(r'\bwip:?\b')
 
 
 # GitHub API datetime-stamps are already in UTC / Zulu time (+0000)
@@ -80,7 +84,7 @@ def needs_more_data(issue):
 
 
 def work_in_progress(issue):
-    return has_label(issue, "WIP")
+    return has_label(issue, "WIP") or _WIP_RE.search(issue["title"].lower())
 
 
 def teams(issue):
