@@ -105,6 +105,9 @@ def main():
         "list issues/prs that have not been updated for more than the specified number of days (number, default is 0)"
     )
 
+    html_parser = subparsers.add_parser(
+        "html", help="generate HTML for issues/pull requests that need attention")
+
     report_selector = report_parser.add_mutually_exclusive_group()
     report_selector.add_argument(
         '-a',
@@ -126,6 +129,8 @@ def main():
         reports.report(args.report if args.report else reports.report_names())
     elif args.command == "garden":
         reports.garden(args.list_issues, args.list_pull_requests, args.stale_for_days)
+    elif args.command == "html":
+        reports.html_garden()
     else:
         parser.print_usage()
 
