@@ -19,6 +19,7 @@ REPOS = [
   'bazelbuild/buildtools',
   'bazelbuild/codelabs',
   'bazelbuild/examples',
+  'bazelbuild/intellij',
   'bazelbuild/skydoc',
   'bazelbuild/starlark',
 ]
