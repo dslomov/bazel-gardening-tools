@@ -2,7 +2,7 @@
 
 import argparse
 import datetime
-import json
+import urllib
 
 import github
 
@@ -18,15 +18,18 @@ REPOS = [
 def update_download_counts(all_repos=False):
   repos = REPOS
   if all_repos:
-    all_repos = github.fetch_repos('bazelbuild')
-    print( all_repos)
+    repos = github.fetch_repos('bazelbuild')
+    print(repos)
   tag = datetime.datetime.now().strftime('%Y-%m-%d')
   with open('downloads.%s' % tag, 'w') as out:
     for repo in repos:
-      releases = github.fetch_releases(repo)
-      for release in releases:
-        for asset in release['assets']:
-          out.write('%s|%s|%d\n' % (tag, asset['name'], asset['download_count']))
+      try:
+        releases = github.fetch_releases(repo)
+        for release in releases:
+          for asset in release['assets']:
+            out.write('%s|%s|%d\n' % (tag, asset['name'], asset['download_count']))
+      except urllib.error.HTTPError as e:
+        print('Skipping %s: %s' % (repo, e))
 
 
 def main():
