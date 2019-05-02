@@ -388,7 +388,8 @@ def issues_to_garden(reporter, issues, stale_for_days):
             and not is_pull_request(issue) \
             and is_stale(issue, stale_for_days) \
             and not work_in_progress(issue) \
-            and not has_label(issue, "release")
+            and not has_label(issue, "release") \
+            and not has_label(issue, "incompatible-change")
 
     reporter(
         issues,
