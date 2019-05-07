@@ -66,7 +66,8 @@ def map_raw_data(file_names):
   This is probably temporary code.
 
   For each data files:
-    Categorize each entry along dimensions
+    Categorize each entry along the important dimensions
+      - gather the oddball stuff into an attribute bag for now
     Re-emit that in a form easy to sort and reduce
   """
 
@@ -79,7 +80,14 @@ def map_raw_data(file_names):
       for line in df:
         line = line.strip()
         ymd, hm, filename, count = line.split('|')
+        # eat away parts until todo us empty
         todo = filename
+        attributes = []
+
+        # msvc was an odd tag added to early versions
+        if todo.find('-msvc') > 0:
+          attributes.append('msvc')
+          todo = todo.replace('-msvc', '')
 
         ver_match = version_re.search(todo)
         if not ver_match:
@@ -96,7 +104,6 @@ def map_raw_data(file_names):
           os = 'macos'
 
         # extract sig before packaging, so .sh and .sha256 are not confused
-        attributes = []
         if todo.endswith('.sig'):
           todo = todo[0:-4]
           attributes.append('sig')
@@ -111,11 +118,11 @@ def map_raw_data(file_names):
         if packaging and packaging[0] == '.':
           packaging = packaging[1:]
 
-        installer, todo, = ExtractFeature(todo, ['installer'])
+        installer, todo = ExtractFeature(todo, ['installer'])
         installer = 'installer' if installer else 'standalone'
 
         # How we say things about JDK is a mess
-        nojdk, todo, = ExtractFeature(todo, ['without-jdk'])
+        nojdk, todo = ExtractFeature(todo, ['without-jdk'])
         jdk = None
         if nojdk:
           jdk = 'nojdk'
@@ -126,10 +133,6 @@ def map_raw_data(file_names):
             todo = todo[0:jdk_match.start(1)] + todo[jdk_match.end(1):]
           if jdk:
             attributes.append(jdk)
-
-        msvc, todo, = ExtractFeature(todo, ['without-msvc', 'msvc'])
-        if msvc:
-          attributes.append(msvc)
 
         left = re.sub(r'^[- _.]*', '', todo)
         if left:
