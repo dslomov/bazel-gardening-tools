@@ -104,19 +104,25 @@ def map_raw_data(file_names):
           os = 'macos'
 
         # extract sig before packaging, so .sh and .sha256 are not confused
+        is_bin = True
         if todo.endswith('.sig'):
           todo = todo[0:-4]
           attributes.append('sig')
+          is_bin = False
         elif todo.endswith('.sha256'):
           todo = todo[0:-7]
           attributes.append('sig')
-        else:
-          attributes.append('bin')
+          is_bin = False
 
         packaging, todo = ExtractFeature(
             todo, ['.exe', '.sh', '.deb', '.rpm', '.zip', '.tar.gz', '.tgz'])
         if packaging and packaging[0] == '.':
           packaging = packaging[1:]
+        if packaging in ['tar.gz', 'tgz']:
+          if not arch:
+            arch = 'src'
+          if not os:
+            os = 'any'
 
         installer, todo = ExtractFeature(todo, ['installer'])
         installer = 'installer' if installer else 'standalone'
@@ -137,9 +143,10 @@ def map_raw_data(file_names):
         left = re.sub(r'^[- _.]*', '', todo)
         if left:
           left = ' - LEAVES(%s)' % left
-        print('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|{%s}%s' % (
+        print('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|{%s}%s' % (
             filename, ymd, hm, count,
             product, version, arch, os, packaging, installer,
+            is_bin,
             '|'.join(attributes), left))
 
 
