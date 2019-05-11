@@ -33,7 +33,6 @@ def update_download_counts(all_repos=False):
       try:
         releases = github.fetch_releases(repo)
         for release in releases:
-          name_to_counts = {}
           name_to_counts = collections.defaultdict(dict)
           for asset in release['assets']:
             file_name = asset['name']
