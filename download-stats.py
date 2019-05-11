@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
+import collections
 import datetime
 import re
 import string
@@ -32,9 +33,24 @@ def update_download_counts(all_repos=False):
       try:
         releases = github.fetch_releases(repo)
         for release in releases:
+          name_to_counts = collections.defaultdict(dict)
           for asset in release['assets']:
-            out.write('%s|%s|%s|%d\n' % (ymd, hm, asset['name'],
-                                         asset['download_count']))
+            file_name = asset['name']
+            count = int(asset['download_count'])
+            if file_name.endswith('.sig'):
+              file_name = file_name[0:-4]
+              name_to_counts[file_name]['sig'] = count
+            elif file_name.endswith('.sha256'):
+              file_name = file_name[0:-7]
+              name_to_counts[file_name]['sha256'] = count
+            else:
+              name_to_counts[file_name]['bin'] = count
+
+          for file_name, counts in name_to_counts.items():
+            out.write('%s|%s|%s|%d|%d|%d\n' % (ymd, hm, file_name,
+                                               counts.get('bin') or 0,
+                                               counts.get('sha256') or 0,
+                                               counts.get('sig') or 0))
       except urllib.error.HTTPError as e:
         print('Skipping %s: %s' % (repo, e))
 
@@ -79,7 +95,7 @@ def map_raw_data(file_names):
     with open(f, 'r') as df:
       for line in df:
         line = line.strip()
-        ymd, hm, filename, count = line.split('|')
+        ymd, hm, filename, bin_count, sha_count, sig_count = line.split('|')
         # eat away parts until todo us empty
         todo = filename
         attributes = []
@@ -143,8 +159,8 @@ def map_raw_data(file_names):
         left = re.sub(r'^[- _.]*', '', todo)
         if left:
           left = ' - LEAVES(%s)' % left
-        print('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|{%s}%s' % (
-            filename, ymd, hm, count,
+        print('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|{%s}%s' % (
+            filename, ymd, hm, bin_count, sha_count, sig_count,
             product, version, arch, os, packaging, installer,
             is_bin,
             '|'.join(attributes), left))
