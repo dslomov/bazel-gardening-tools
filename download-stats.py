@@ -16,6 +16,7 @@ REPOS = [
   'bazelbuild/bazel-website',
   'bazelbuild/bazel-skylib',
   'bazelbuild/bazel',
+  'bazelbuild/bazelisk',
 ]
 
 
@@ -106,14 +107,24 @@ def map_raw_data(file_names):
           todo = todo.replace('-msvc', '')
 
         ver_match = version_re.search(todo)
-        if not ver_match:
-          print('Can not find version on:', line, file=sys.stderr)
-          continue
+        if ver_match:
+          product = todo[0:ver_match.start(0)]
+          version = ver_match.group(1)
+          todo = todo[ver_match.end(1):]
+        else:
+          # some things are unversioned. e.g. bazelisk-os-arch.
+          sep_pos = todo.find('-')
+          if sep_pos <= 0:
+            print('Can not find version on:', line, file=sys.stderr)
+            continue
+          product = todo[0:sep_pos]
+          version = 'head'
+          todo = todo[sep_pos:]
 
-        product = todo[0:ver_match.start(0)]
-        version = ver_match.group(1)
-        todo = todo[ver_match.end(1):]
-        arch, todo = ExtractFeature(todo, ['x86_64'])
+        arch, todo = ExtractFeature(todo, ['x86_64', 'amd64'])
+        if arch == 'amd64':
+          arch = 'x86_64'
+
         os, todo = ExtractFeature(
             todo, ['dist', 'linux', 'darwin', 'macos', 'osx', 'windows'])
         if os in ['darwin', 'osx']:
