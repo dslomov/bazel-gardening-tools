@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS gh_downloads(
   arch VARCHAR(20),
   os VARCHAR(20),
   extension VARCHAR(10),
-  is_inst BOOL  # is installer
+  is_installer BOOL
 )
 
 /*
