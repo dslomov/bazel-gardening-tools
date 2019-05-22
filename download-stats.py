@@ -19,6 +19,13 @@ REPOS = [
   'bazelbuild/bazelisk',
 ]
 
+Bins = collections.namedtuple(
+    'Bins',
+    'product version arch os packaging installer is_bin attributes leftover')
+
+_VERSION_RE = re.compile('[-_.](\d+\.\d+\.\d+[a-z]*)[-_.]')
+_JDK_SPEC_RE = re.compile('[^a-z]?(jdk\d*)')
+
 
 def update_download_counts(all_repos=False):
   repos = REPOS
@@ -48,10 +55,15 @@ def update_download_counts(all_repos=False):
               name_to_counts[file_name]['bin'] = count
 
           for file_name, counts in name_to_counts.items():
-            out.write('%s|%s|%s|%d|%d|%d\n' % (ymd, hm, file_name,
-                                               counts.get('bin') or 0,
-                                               counts.get('sha256') or 0,
-                                               counts.get('sig') or 0))
+            bins = Categorize(file_name)
+            if bins:
+              out.write('%s|%s|%s|%d|%d|%d|%s|%s|%s|%s|%s|%s|%s|{%s}%s\n' % (
+                  file_name, ymd, hm, counts.get('bin') or 0,
+                  counts.get('sha256') or 0, counts.get('sig') or 0,
+                  bins.product, bins.version, bins.arch, bins.os, bins.packaging,
+                  bins.installer, bins.is_bin, bins.attributes,
+                  bins.leftover))
+
       except urllib.error.HTTPError as e:
         print('Skipping %s: %s' % (repo, e))
 
@@ -87,94 +99,102 @@ def map_raw_data(file_names):
       - gather the oddball stuff into an attribute bag for now
     Re-emit that in a form easy to sort and reduce
   """
-
-  version_re = re.compile('[-_.](\d+\.\d+\.\d+[a-z]*)[-_.]')
-  jdk_spec_re = re.compile('[^a-z]?(jdk\d*)')
-
   for f in file_names:
     print('Loading:', f, file=sys.stderr)
     with open(f, 'r') as df:
       for line in df:
         line = line.strip()
-        ymd, hm, filename, bin_count, sha_count, sig_count = line.split('|')
-        # eat away parts until todo us empty
-        todo = filename
-        attributes = []
+        ymd, hm, file_name, bin_count, sha_count, sig_count = line.split('|')
+        bins = Categorize(file_name)
+        if bins:
+          print('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|{%s}%s' % (
+              file_name, ymd, hm, bin_count, sha_count, sig_count,
+              bins.product, bins.version, bins.arch, bins.os, bins.packaging,
+              bins.installer, bins.is_bin, bins.attributes,
+              bins.leftover))
 
-        # msvc was an odd tag added to early versions
-        if todo.find('-msvc') > 0:
-          attributes.append('msvc')
-          todo = todo.replace('-msvc', '')
 
-        ver_match = version_re.search(todo)
-        if ver_match:
-          product = todo[0:ver_match.start(0)]
-          version = ver_match.group(1)
-          todo = todo[ver_match.end(1):]
-        else:
-          # some things are unversioned. e.g. bazelisk-os-arch.
-          sep_pos = todo.find('-')
-          if sep_pos <= 0:
-            print('Can not find version on:', line, file=sys.stderr)
-            continue
-          product = todo[0:sep_pos]
-          version = 'head'
-          todo = todo[sep_pos:]
+def Categorize(file_name):
+  """Break down file name into bins that matter."""
 
-        arch, todo = ExtractFeature(todo, ['x86_64', 'amd64'])
-        if arch == 'amd64':
-          arch = 'x86_64'
+  # eat away parts until todo us empty
+  todo = file_name
+  attributes = []
 
-        os, todo = ExtractFeature(
-            todo, ['dist', 'linux', 'darwin', 'macos', 'osx', 'windows'])
-        if os in ['darwin', 'osx']:
-          os = 'macos'
+  # msvc was an odd tag added to early versions
+  if todo.find('-msvc') > 0:
+    attributes.append('msvc')
+    todo = todo.replace('-msvc', '')
 
-        # extract sig before packaging, so .sh and .sha256 are not confused
-        is_bin = True
-        if todo.endswith('.sig'):
-          todo = todo[0:-4]
-          attributes.append('sig')
-          is_bin = False
-        elif todo.endswith('.sha256'):
-          todo = todo[0:-7]
-          attributes.append('sig')
-          is_bin = False
+  ver_match = _VERSION_RE.search(todo)
+  if ver_match:
+    product = todo[0:ver_match.start(0)]
+    version = ver_match.group(1)
+    todo = todo[ver_match.end(1):]
+  else:
+    # some things are unversioned. e.g. bazelisk-os-arch.
+    sep_pos = todo.find('-')
+    if sep_pos <= 0:
+      print('Can not find version on:', line, file=sys.stderr)
+      return None
+    product = todo[0:sep_pos]
+    version = 'head'
+    todo = todo[sep_pos:]
 
-        packaging, todo = ExtractFeature(
-            todo, ['.exe', '.sh', '.deb', '.rpm', '.zip', '.tar.gz', '.tgz'])
-        if packaging and packaging[0] == '.':
-          packaging = packaging[1:]
-        if packaging in ['tar.gz', 'tgz']:
-          if not arch:
-            arch = 'src'
-          if not os:
-            os = 'any'
+  arch, todo = ExtractFeature(todo, ['x86_64', 'amd64'])
+  if arch == 'amd64':
+    arch = 'x86_64'
 
-        installer, todo = ExtractFeature(todo, ['installer'])
-        installer = 'installer' if installer else 'standalone'
+  os, todo = ExtractFeature(
+      todo, ['dist', 'linux', 'darwin', 'macos', 'osx', 'windows'])
+  if os in ['darwin', 'osx']:
+    os = 'macos'
+  if os == 'dist':
+    os = 'any'
 
-        # How we say things about JDK is a mess
-        nojdk, todo = ExtractFeature(todo, ['without-jdk'])
-        jdk = None
-        if nojdk:
-          jdk = 'nojdk'
-        else:
-          jdk_match = jdk_spec_re.search(todo)
-          if jdk_match:
-            jdk = jdk_match.group(1)
-            todo = todo[0:jdk_match.start(1)] + todo[jdk_match.end(1):]
-          if jdk:
-            attributes.append(jdk)
+  # extract sig before packaging, so .sh and .sha256 are not confused
+  is_bin = True
+  if todo.endswith('.sig'):
+    todo = todo[0:-4]
+    attributes.append('sig')
+    is_bin = False
+  elif todo.endswith('.sha256'):
+    todo = todo[0:-7]
+    attributes.append('sig')
+    is_bin = False
 
-        left = re.sub(r'^[- _.]*', '', todo)
-        if left:
-          left = ' - LEAVES(%s)' % left
-        print('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|{%s}%s' % (
-            filename, ymd, hm, bin_count, sha_count, sig_count,
-            product, version, arch, os, packaging, installer,
-            is_bin,
-            '|'.join(attributes), left))
+  packaging, todo = ExtractFeature(
+      todo, ['.exe', '.sh', '.deb', '.rpm', '.zip', '.tar.gz', '.tgz'])
+  if packaging and packaging[0] == '.':
+    packaging = packaging[1:]
+  if packaging in ['tar.gz', 'tgz']:
+    if not arch:
+      arch = 'src'
+    if not os:
+      os = 'any'
+
+  installer, todo = ExtractFeature(todo, ['installer'])
+  installer = 'installer' if installer else 'standalone'
+
+  # How we say things about JDK is a mess
+  nojdk, todo = ExtractFeature(todo, ['without-jdk'])
+  jdk = None
+  if nojdk:
+    jdk = 'nojdk'
+  else:
+    jdk_match = _JDK_SPEC_RE.search(todo)
+    if jdk_match:
+      jdk = jdk_match.group(1)
+      todo = todo[0:jdk_match.start(1)] + todo[jdk_match.end(1):]
+    if jdk:
+      attributes.append(jdk)
+
+  left = re.sub(r'^[- _.]*', '', todo)
+  if left:
+    left = ' - LEAVES(%s)' % left
+
+  return Bins(product, version, arch, os, packaging, installer, is_bin,
+              '|'.join(attributes), left)
 
 
 def main():
