@@ -61,14 +61,14 @@ def upload_file(file, connection):
             installer=parts[11] == 'installer')
 
         cmd = """INSERT INTO gh_downloads(
-            sample_date, filename, downloads, sha256, sig,
+            sample_date, filename, downloads_total, sha256_total, sig_total,
             product, version, arch, os, extension, is_installer)
         VALUES(
             '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d'
         )""" % (sample.ymd, sample.file,
                 sample.downloads, sample.downloads_sha, sample.downloads_sig,
                 sample.product, sample.version, sample.arch, sample.os,
-                sample.extension, 1 if sample.installer else 0) 
+                sample.extension, 1 if sample.installer else 0)
         cursor.execute(cmd)
     connection.commit()
 

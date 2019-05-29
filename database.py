@@ -91,7 +91,7 @@ class LabelDB(object):
   @staticmethod
   def _normalize(name):
     """The compare key for labels is alphanumeric only, with no punctuation.
-    
+
     This accounts for minor punctuation differences between projects.
     """
     return ''.join(filter(lambda ch: ch.isalnum(), name.lower()))
