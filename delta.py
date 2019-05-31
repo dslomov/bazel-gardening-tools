@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Upload to database.
+"""Convert cumulative updates to daily.
 
 Should eventually be combined with categorize tool.
 """
