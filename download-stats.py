@@ -120,6 +120,8 @@ def ExtractFeature(s, feature_list):
         # If we are left with after just being the '-', drop it.
         if len(after) == 1:
           after = ''
+      elif len(after) == 0 and before[-1] in string.punctuation:
+        before = before[0:-1]
       return feature.lower(), before + after
   return None, s
 
@@ -139,8 +141,9 @@ def MapRawData(file_names):
     with open(f, 'r') as df:
       for line in df:
         line = line.strip()
-        file_name, ymd, hm, bin_count, sha_count, sig_count = line.split('|')
-        bins = Categorize(file_name, '@REPO_TAG@')
+        (file_name, ymd, hm, bin_count, sha_count, sig_count, o_prod,
+         o_version) = line.split('|')
+        bins = Categorize(file_name, o_version or '@REPO_TAG@')
         if bins:
           print('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|{%s}%s' % (
               file_name, ymd, hm, bin_count, sha_count, sig_count,
