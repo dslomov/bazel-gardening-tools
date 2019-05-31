@@ -30,7 +30,6 @@ REPOS = [
     'bazelbuild/starlark',
 ]
 
-
 Bins = collections.namedtuple(
     'Bins',
     'product version arch os packaging installer is_bin attributes leftover')
@@ -64,8 +63,16 @@ def CollectDownloadCounts(out, repos, ymd, hm):
       releases = github.fetch_releases(repo)
       for release in releases:
         tag = release['tag_name']
-        print('Scanning %s, rel:%s' % (repo, tag))
+        label = '%s/%s' % (repo, tag)
+        print('Scanning:', label)
         name_to_counts = collections.defaultdict(dict)
+        assets = release.get('assets')
+        if not assets:
+          err = 'WARNING: %s has no assets' % label
+          if release.get('tarball_url') or release.get('zipball_url'):
+            err += ', but it does have zip or tar downloads'
+          print(err)
+          continue
         for asset in release['assets']:
           file_name = asset['name']
           count = int(asset['download_count'])
@@ -267,4 +274,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
