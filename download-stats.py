@@ -30,12 +30,6 @@ REPOS = [
     'bazelbuild/starlark',
 ]
 
-REPOS = [
-    'bazelbuild/buildtools',
-    'bazelbuild/rules_android',
-    'bazelbuild/bazel-skylib',
-]
-
 
 Bins = collections.namedtuple(
     'Bins',
