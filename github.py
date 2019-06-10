@@ -39,7 +39,7 @@ def get_next_url(response):
     return None
 
 
-def fetch_issues(repo, query, modified_after=None):
+def fetch_issues(repo, query, modified_after=None, verbose=False):
     """Fetches issues from a repo.
 
     Args:
@@ -57,7 +57,8 @@ def fetch_issues(repo, query, modified_after=None):
         utc_time_s = datetime.datetime.utcfromtimestamp(
             modified_after).strftime('%Y-%m-%dT%H:%M:%SZ')
         query_args.append('since=%s' % utc_time_s)
-        print('Fetching issues changed since: %s' % utc_time_s)
+        if verbose:
+            print('Fetching issues changed since: %s' % utc_time_s)
     url = GITHUB_API_URL_BASE + repo + '/issues?' + '&'.join(query_args)
     result = dict()
     i = 0
@@ -69,7 +70,8 @@ def fetch_issues(repo, query, modified_after=None):
         for issue in issues:
             result[issue["number"]] = issue
         url = get_next_url(response.info())
-    print(len(result))
+    if verbose or _DEBUG:
+      print('%d issues' % len(result))
     return list(result.values())
 
 

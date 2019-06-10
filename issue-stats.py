@@ -36,7 +36,7 @@ def update_labels(repo):
     json.dump(labels, open(label_file_for_repo(repo), "w+"), indent=2)
 
 
-def update(full_update=False):
+def update(full_update=False, verbose=False):
     if full_update:
         db_time = None
         issues = []
@@ -54,7 +54,10 @@ def update(full_update=False):
         db_time = latest_change.timestamp()
 
     for repo in REPOS:
-        new_issues = github.fetch_issues(repo, "", modified_after=db_time)
+        if verbose:
+            print("Getting issues for ", repo)
+        new_issues = github.fetch_issues(repo, "", modified_after=db_time,
+                                         verbose=verbose)
         if full_update:
             issues.extend(new_issues)
         else:
@@ -68,12 +71,18 @@ def update(full_update=False):
                     issues.append(issue)
     json.dump(issues, open(database.all_issues_file, "w+"), indent=2)
     for repo in REPOS:
+        if verbose:
+            print("Getting labels for ", repo)
         update_labels(repo)
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="Gather Bazel's issues and pull requests data")
+
+    parser.add_argument('--verbose', action='store_true',
+                        help='Be more verbose')
+
     subparsers = parser.add_subparsers(dest="command", help="select a command")
 
     update_parser = subparsers.add_parser("update", help="update the datasets")
@@ -125,7 +134,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "update":
-        update(args.full)
+        update(args.full, args.verbose)
     elif args.command == "report":
         reports.report(args.report if args.report else reports.report_names())
     elif args.command == "garden":
