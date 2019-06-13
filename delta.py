@@ -37,14 +37,14 @@ def ComputeDailyDownloads(connection, trailing_days):
   with connection.cursor() as cursor:
     cursor.execute(
         """
-        select filename, sample_date,
+        select filename, version, sample_date,
                datediff(sample_date, '2019-01-01') as day,
                downloads, downloads_total,
                sha256, sha256_total,
                sig, sig_total
         from gh_downloads
         where sample_date >= date_sub(curdate(), interval %d day)
-        order by filename, day
+        order by filename, version, day
         """ % (trailing_days))
 
     last_day = None
@@ -62,6 +62,7 @@ def ComputeDailyDownloads(connection, trailing_days):
 
       if row:
         filename = row['filename']
+        version = row['version']
         sample_date = row['sample_date']
         day = row['day']
         downloads = row['downloads']
@@ -71,7 +72,8 @@ def ComputeDailyDownloads(connection, trailing_days):
         sig = row['sig']
         sig_total = row['sig_total']
 
-        if last_day and last_filename == filename:
+        if (last_day and last_filename == filename
+            and last_version == version):
           u_downloads = u_sha256 = u_sig = -1
           if downloads is None or downloads < 0:
             u_downloads = downloads_total - last_downloads
@@ -95,9 +97,10 @@ def ComputeDailyDownloads(connection, trailing_days):
           if sig is None or sig < 0:
             u_sig = sig_total - last_sig
           if u_downloads >= 0 or u_sha256 >= 0 or u_sig >= 0:
-            updates.append((filename, sample_date, u_downloads, u_sha256, u_sig))
+            updates.append((filename, version, sample_date, u_downloads, u_sha256, u_sig))
 
         last_filename = filename
+        last_version = version
         last_day = day
         last_downloads = downloads_total
         last_sha256 = sha256_total
@@ -113,14 +116,15 @@ def ApplyUpdates(connection, updates, dry_run=True):
     if not dry_run and not cursor:
       cursor = connection.cursor()
     s = []
-    if u[2] >= 0:
-      s.append('downloads=%d' % u[2])
     if u[3] >= 0:
-      s.append('sha256=%d' % u[3])
+      s.append('downloads=%d' % u[3])
     if u[4] >= 0:
-      s.append('sig=%d' % u[4])
+      s.append('sha256=%d' % u[4])
+    if u[5] >= 0:
+      s.append('sig=%d' % u[5])
     cmd = 'update gh_downloads set %s' % ','.join(s)
-    cmd = cmd + ' where filename="%s" and sample_date="%s"' % (u[0], u[1])
+    cmd += ' where filename="%s" and version="%s" and sample_date="%s"' % (
+        u[0], u[1], u[2])
     print(cmd)
     if not dry_run:
       cursor.execute(cmd)
