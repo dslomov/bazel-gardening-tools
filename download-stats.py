@@ -1,13 +1,15 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
 import argparse
 import collections
 import datetime
+import io
 import re
 import string
 import sys
 import urllib
 
+# from google.cloud import storage
 import github
 
 
@@ -42,7 +44,7 @@ _MACOS_PACKAGE_EXTENSIONS = ['.dmg', '.mac', '.osx']
 _WINDOWS_PACKAGE_EXTENSIONS = ['.exe']
 
 
-def FetchDownloadCounts(all_repos=False):
+def FetchDownloadCounts(all_repos=False, storage_bucket=None, folder=None):
   repos = REPOS
   if all_repos:
     repos = github.fetch_repos('bazelbuild')
@@ -52,9 +54,17 @@ def FetchDownloadCounts(all_repos=False):
   hm = now.strftime('%H%M')
   file_name = 'downloads.%s.%s.txt' % (ymd, hm)
 
-  # FUTURE: save to cloud rather than local disk
-  with open(file_name, 'w') as out:
+  if storage_bucket:
+    out = io.StringIO()
     CollectDownloadCounts(out, repos, ymd, hm)
+    if folder:
+      # Not using os.path.join because we need gcs path sep.
+      file_name = folder + '/' + file_name
+    blob = storage_bucket.blob(file_name)
+    blob.upload_from_string(out.getvalue(), content_type='text/plain')
+  else:
+    with open(file_name, 'w') as out:
+      CollectDownloadCounts(out, repos, ymd, hm)
 
 
 def CollectDownloadCounts(out, repos, ymd, hm):
@@ -257,6 +267,15 @@ def main():
   update_parser.add_argument(
       '--all', action='store_true',
       help='Get all repositories rather than just the select ones')
+  update_parser.add_argument(
+      '--bucket', default='',
+      help='Write results to GCS bucket')
+  update_parser.add_argument(
+      '--folder', default=None,
+      help='Folder in GCS bucket')
+  update_parser.add_argument(
+      '--save_cloud', action='store_true',
+      help='Save snapshot to gcs cloud rather than writing to stdout')
 
   # Usage:  download-stats map downloads.*
   map_parser = subparsers.add_parser('map', help='categorize the data')
@@ -264,8 +283,13 @@ def main():
       'files', nargs=argparse.REMAINDER, help='raw data files')
 
   args = parser.parse_args()
+  storage_bucket = None
+  if args.save_cloud:
+    storage_client = storage.Client()
+    storage_bucket = storage_client.get_bucket(args.bucket)
+
   if args.command == 'update':
-    FetchDownloadCounts(args.all)
+    FetchDownloadCounts(args.all, storage_bucket, args.folder)
   elif args.command == 'map':
     MapRawData(args.files)
   else:
