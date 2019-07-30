@@ -66,7 +66,7 @@ def upload_file(file, connection):
             downloads, sha256, sig)
         VALUES(
             '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d',
-            -1, -1, -1
+            0, 0, 0
         )""" % (sample.ymd, sample.file,
                 sample.downloads, sample.downloads_sha, sample.downloads_sig,
                 sample.product, sample.version, sample.arch, sample.os,

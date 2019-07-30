@@ -5,11 +5,11 @@
 CREATE TABLE IF NOT EXISTS gh_downloads(
   sample_date DATE,
   filename VARCHAR(200),
-  downloads INT DEFAULT -1,  # downloads today
+  downloads INT DEFAULT 0,  # downloads today
   downloads_total INT, # cumulative downloads of all time
-  sha256 INT DEFAULT -1,
+  sha256 INT DEFAULT 0,
   sha256_total INT,
-  sig INT DEFAULT -1,
+  sig INT DEFAULT 0,
   sig_total INT,
   product VARCHAR(50),
   version VARCHAR(50),
