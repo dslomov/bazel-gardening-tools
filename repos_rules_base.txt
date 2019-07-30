@@ -1,0 +1,4 @@
+bazelbuild/bazel-skylib
+bazelbuild/bazel-toolchains
+bazelbuild/bazel-federation
+bazelbuild/platforms

@@ -13,7 +13,7 @@ import urllib
 import github
 
 
-REPOS = [
+DEFAULT_REPOS = [
     'bazelbuild/bazel',
     'bazelbuild/bazel-gazelle',
     'bazelbuild/bazelisk',
@@ -44,11 +44,7 @@ _MACOS_PACKAGE_EXTENSIONS = ['.dmg', '.mac', '.osx']
 _WINDOWS_PACKAGE_EXTENSIONS = ['.exe']
 
 
-def FetchDownloadCounts(all_repos=False, storage_bucket=None, folder=None):
-  repos = REPOS
-  if all_repos:
-    repos = github.fetch_repos('bazelbuild')
-    print(repos)
+def FetchDownloadCounts(repos, storage_bucket=None, folder=None):
   now = datetime.datetime.now()
   ymd = now.strftime('%Y-%m-%d')
   hm = now.strftime('%H%M')
@@ -242,7 +238,7 @@ def Categorize(file_name, default_version=None):
     # some things are unversioned. e.g. bazelisk-os-arch.
     sep_pos = todo.find('-')
     if sep_pos <= 0:
-      print('Can not find version on:', file_name, file=sys.stderr)
+      # print('Can not find version on:', file_name, file=sys.stderr)
       product = todo
       todo = ''
       version = default_version
@@ -260,13 +256,16 @@ def Categorize(file_name, default_version=None):
 
 
 def main():
-  parser = argparse.ArgumentParser(description='Gather Bazel metrics')
+  parser = argparse.ArgumentParser(description='Collect Bazel repo download metrics')
   subparsers = parser.add_subparsers(dest='command', help='select a command')
 
   update_parser = subparsers.add_parser('update', help='update the datasets')
   update_parser.add_argument(
       '--all', action='store_true',
       help='Get all repositories rather than just the select ones')
+  update_parser.add_argument(
+      '--repo_list_file', action='store',
+      help='Get repositories listed in this file')
   update_parser.add_argument(
       '--bucket', default='',
       help='Write results to GCS bucket')
@@ -283,13 +282,23 @@ def main():
       'files', nargs=argparse.REMAINDER, help='raw data files')
 
   args = parser.parse_args()
+  if not args.command:
+    parser.print_usage()
+    sys.exit(1)
+
   storage_bucket = None
   if args.save_cloud:
     storage_client = storage.Client()
     storage_bucket = storage_client.get_bucket(args.bucket)
 
   if args.command == 'update':
-    FetchDownloadCounts(args.all, storage_bucket, args.folder)
+    repos = DEFAULT_REPOS
+    if args.all:
+      repos = github.fetch_repos('bazelbuild')
+    if args.repo_list_file:
+      with open(args.repo_list_file, 'r') as rf:
+        repos = [l.strip() for l in rf.read().strip().split('\n')]
+    FetchDownloadCounts(repos, storage_bucket, args.folder)
   elif args.command == 'map':
     MapRawData(args.files)
   else:
