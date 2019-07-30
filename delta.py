@@ -75,7 +75,7 @@ def ComputeDailyDownloads(connection, trailing_days):
         if (last_day and last_filename == filename
             and last_version == version):
           u_downloads = u_sha256 = u_sig = -1
-          if downloads is None or downloads < 0:
+          if downloads is None or downloads <= 0:
             u_downloads = downloads_total - last_downloads
 
           # This corrects the 2019-04-15 problem. We had no data between 4/2
@@ -92,11 +92,11 @@ def ComputeDailyDownloads(connection, trailing_days):
             else:
               u_downloads = -1
 
-          if sha256 is None or sha256 < 0:
+          if sha256 is None or sha256 <= 0:
             u_sha256 = sha256_total - last_sha256
-          if sig is None or sig < 0:
+          if sig is None or sig <= 0:
             u_sig = sig_total - last_sig
-          if u_downloads >= 0 or u_sha256 >= 0 or u_sig >= 0:
+          if u_downloads > 0 or u_sha256 > 0 or u_sig > 0:
             updates.append((filename, version, sample_date, u_downloads, u_sha256, u_sig))
 
         last_filename = filename
