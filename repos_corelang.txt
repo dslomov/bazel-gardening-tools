@@ -1,0 +1,10 @@
+bazelbuild/java_tools
+bazelbuild/rules_android
+bazelbuild/rules_apple
+bazelbuild/rules_cc
+bazelbuild/rules_foreign_cc
+bazelbuild/rules_go
+bazelbuild/rules_java
+bazelbuild/rules_kotlin
+bazelbuild/rules_python
+bazelbuild/rules_rust
