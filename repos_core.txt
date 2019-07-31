@@ -3,4 +3,3 @@ bazelbuild/bazel-gazelle
 bazelbuild/bazelisk
 bazelbuild/buildtools
 bazelbuild/starlark
-bazelbuild/bazel-skylib
