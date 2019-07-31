@@ -7,29 +7,15 @@ Should eventually be combined with categorize tool.
 
 import argparse
 import collections
-import getpass
-import pymysql
 import sys
 
+import cloudsql
 
 
 DownloadSample = collections.namedtuple(
     'DownloadSample',
     'file ymd hhmm downloads downloads_sha downloads_sig'
     ' product version arch os extension installer')
-
-
-def Connect(database):
-  user=getpass.getuser()
-  connection = pymysql.connect(
-      host='localhost',
-      user=user,
-      password=getpass.getpass(
-          prompt='password for %s@%s: ' % (user, database)),
-      db=database,
-      charset='utf8',
-      cursorclass=pymysql.cursors.DictCursor)
-  return connection
 
 
 def ComputeDailyDownloads(connection, trailing_days):
@@ -154,7 +140,7 @@ def main():
         help='How many days to look back in time')
 
   args = parser.parse_args()
-  connection = Connect(args.database)
+  connection = cloudsql.Connect(args.database)
   updates = ComputeDailyDownloads(connection, 20)
   ApplyUpdates(connection, updates, args.dry_run)
 

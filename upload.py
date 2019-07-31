@@ -7,29 +7,15 @@ Should eventually be combined with categorize tool.
 
 
 import collections
-import getpass
-import pymysql
 import sys
 
+import cloudsql
 
 
 DownloadSample = collections.namedtuple(
     'DownloadSample',
     'file ymd hhmm downloads downloads_sha downloads_sig'
     ' product version arch os extension installer')
-
-
-def Connect(database):
-  user=getpass.getuser()
-  connection = pymysql.connect(
-      host='localhost',
-      user=user,
-      password=getpass.getpass(
-          prompt='password for %s@%s: ' % (user, database)),
-      db=database,
-      charset='utf8',
-      cursorclass=pymysql.cursors.DictCursor)
-  return connection
 
 
 def NoneToNull(s):
@@ -76,7 +62,7 @@ def upload_file(file, connection):
 
 
 def main(args):
-  connection = Connect('metrics')
+  connection = cloudsql.Connect('metrics')
   for file in args:
     upload_file(file, connection)
   connection.close()
