@@ -134,7 +134,7 @@ def upload_file(file, history, connection, dry_run=True):
          sha256 = sample.sha256_total - previous.sha256_total
          sig = sample.sig_total - previous.sig_total
 
-         if previous.downloads * 110 // 100 < downloads:
+         if previous.downloads * 115 // 100 < downloads:
            print(sample.product, sample.file, sample.version, sample.sample_date,
                  downloads, 'Big jump from %d' % previous.downloads)
 
@@ -177,9 +177,8 @@ def main():
   history = GatherPreviousDownloads(connection, options.window)
   for file in options.files:
     upload_file(file, history, connection, options.dry_run)
-  if not options.dry_run:
-    connection.close()
+  connection.close()
+
 
 if __name__ == '__main__':
   main()
-
