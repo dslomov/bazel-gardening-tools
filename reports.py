@@ -29,6 +29,7 @@ CAT_2_TEAM = {
 #
 
 # Look for WIP markers in issue titles
+_WIP_RE = re.compile(r'\bwip:?\b')
 
 # GitHub API datetime-stamps are already in UTC / Zulu time (+0000)
 def parse_datetime(datetime_string):
@@ -101,8 +102,8 @@ def needs_more_data(issue):
 
 
 def work_in_progress(issue):
-    return has_label(issue, "WIP") or \
-         re.compile(r'\bwip:?\b').search(issue["title"].lower())
+    return has_label(issue, "WIP") or _WIP_RE.search(issue["title"].lower())
+
 
 
 def teams(issue):
@@ -243,11 +244,12 @@ def have_team_no_untriaged_no_priority(reporter, issues):
 
 def stale_pull_requests(reporter, issues, days):
     def predicate(issue):
-        return \
-            is_open(issue) \
-            and is_pull_request(issue) \
-            and is_stale(issue, days) \
+        return (
+            is_open(issue)
+            and is_pull_request(issue)
+            and is_stale(issue, days)
             and not work_in_progress(issue)
+        )
 
     reporter(
         issues,
