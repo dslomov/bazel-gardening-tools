@@ -31,6 +31,7 @@ CAT_2_TEAM = {
 # Look for WIP markers in issue titles
 _WIP_RE = re.compile(r'\bwip:?\b')
 
+
 # GitHub API datetime-stamps are already in UTC / Zulu time (+0000)
 def parse_datetime(datetime_string):
     return datetime.datetime.strptime(datetime_string, "%Y-%m-%dT%H:%M:%SZ")
