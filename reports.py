@@ -105,7 +105,6 @@ def work_in_progress(issue):
     return has_label(issue, "WIP") or _WIP_RE.search(issue["title"].lower())
 
 
-
 def teams(issue):
     return map(lambda i: i["name"], team_labels(issue["labels"]))
 
