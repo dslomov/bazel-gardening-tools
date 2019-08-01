@@ -242,6 +242,21 @@ def have_team_no_untriaged_no_priority(reporter, issues):
         printer=make_console_printer(show_teams=True))
 
 
+def stale_pull_requests(reporter, issues, days):
+    def predicate(issue):
+        return (
+            is_open(issue)
+            and is_pull_request(issue)
+            and is_stale(issue, days)
+            and not work_in_progress(issue)
+        )
+
+    reporter(
+        issues,
+        header="Stale pull requests for %s days" % days,
+        predicate=predicate,
+        printer=make_console_printer(show_title=True, show_age=True))
+
 _REPORTS = {
     "more_than_one_team":
         lambda issues: more_than_one_team(print_report, issues),
@@ -252,6 +267,8 @@ _REPORTS = {
             print_report_group_by_team, issues),
     "unmigrated":
         lambda issues: issues_with_category(print_report, issues),
+    "stale_pull_requests_14d":
+        lambda issues: stale_pull_requests(print_report, issues, 14),
 }
 
 
