@@ -50,8 +50,8 @@ def GatherPreviousDownloads(connection, trailing_days):
                sig, sig_total
         from gh_downloads
         where sample_date >= date_sub(curdate(), interval %d day)
-        order by product, filename, version, day
         """ % (trailing_days))
+        # order by product, filename, version, day
 
     while True:
       try:
@@ -134,9 +134,9 @@ def upload_file(file, history, connection, dry_run=True):
          sha256 = sample.sha256_total - previous.sha256_total
          sig = sample.sig_total - previous.sig_total
 
-         if previous.downloads * 115 // 100 < downloads:
+         if (downloads > 10) and (previous.downloads * 115 // 100 < downloads):
            print(sample.product, sample.file, sample.version, sample.sample_date,
-                 downloads, 'Big jump from %d' % previous.downloads)
+                 downloads, 'large jump from %d' % previous.downloads)
 
       cmd = """INSERT INTO gh_downloads(
           sample_date, filename, downloads_total, sha256_total, sig_total,
@@ -151,6 +151,23 @@ def upload_file(file, history, connection, dry_run=True):
               sample.extension, 1 if sample.installer else 0,
               downloads, sha256, sig,
               )
+      history[(sample.product, sample.file, sample.version, day)] = \
+          DownloadSample(
+              file=sample.file,
+              sample_date=sample.sample_date,
+              downloads_total=sample.downloads_total,
+              sha256_total=sample.sha256_total,
+              sig_total=sample.sig_total,
+              product=sample.product,
+              version=sample.version,
+              arch=sample.arch,
+              os=sample.os,
+              extension=sample.extension,
+              installer=sample.installer,
+              downloads=downloads,
+              sha256=sha256,
+              sig=sig)
+
       if not dry_run:
         cursor.execute(cmd)
   if not dry_run:
