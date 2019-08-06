@@ -257,6 +257,26 @@ def stale_pull_requests(reporter, issues, days):
         predicate=predicate,
         printer=make_console_printer(show_title=True, show_age=True))
 
+
+def incompatible_flag_description(title):
+    pos = title.find(": ")
+    if pos >= 0:
+      return title[0:pos], title[pos+2:]
+    else:
+      return "", title
+
+def breaking_changes_1_0(reporter, issues):
+    def predicate(issue):
+        return has_label(issue, "breaking-change-1.0")
+    def printer(issue):
+        flag, desc = incompatible_flag_description(issue["title"])
+        return "%s | %s" % (issue_url(issue), flag if flag else desc)
+    reporter(
+        issues,
+        header="Breaking changes 1.0",
+        predicate=predicate,
+        printer=printer)
+
 _REPORTS = {
     "more_than_one_team":
         lambda issues: more_than_one_team(print_report, issues),
@@ -269,6 +289,8 @@ _REPORTS = {
         lambda issues: issues_with_category(print_report, issues),
     "stale_pull_requests_14d":
         lambda issues: stale_pull_requests(print_report, issues, 14),
+    "breaking_changes_1.0":
+        lambda issues: breaking_changes_1_0(print_report, issues)
 }
 
 
