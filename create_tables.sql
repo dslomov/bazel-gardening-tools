@@ -41,11 +41,6 @@ from (
 group by sample_date, product, version;
 
 
-create view gh_downloads_by_day_by_os as
-select sample_date, product, version, os, sum(downloads) 'downloads'
-from gh_downloads
-group by sample_date, product, version, os;
-
 
 
 /*
@@ -62,3 +57,10 @@ create view ds_github_downloads_by_day_by_os as
 select date_format(sample_date, "%Y%m%d") "sample_date", product, os, sum(downloads) "downloads"
 from gh_downloads
 group by sample_date, product, os;
+
+
+create view ds_gh_downloads_by_version_by_day as
+select date_format(sample_date, "%Y%m%d") "sample_date", product, version,
+       os, sum(downloads) "downloads"
+from gh_downloads
+group by sample_date, product, version, os;
