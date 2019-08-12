@@ -37,6 +37,7 @@ Bins = collections.namedtuple(
     'product version arch os packaging installer is_bin attributes leftover')
 
 _PRODUCT_VERSION_RE = re.compile(r'(\w+[-\w]*)[-_.](\d+\.\d+\.\d+[a-z\d]*)[^.\D]?')
+_VERSION_RE = re.compile(r'[-_.]v?(\d+\.\d+\.\d+[a-z\d]*(-rc\d+)?)|(\d+\.\d+[a-z\d]*(-rc\d+)?)')
 _JDK_SPEC_RE = re.compile(r'[^a-z]?(jdk\d*)')
 
 _LINUX_PACKAGE_EXTENSIONS = ['.sh', '.deb', '.rpm', '.zip', '.tar.gz', '.tgz']
@@ -149,7 +150,8 @@ def MapRawData(file_names):
       for line in df:
         line = line.strip()
         (file_name, ymd, hm, bin_count, sha_count, sig_count, o_prod,
-         o_version) = line.split('|')
+         o_version, o_arch, o_os, o_packaging, o_installer, o_is_bin,
+         o_left) = line.split('|')
         bins = Categorize(file_name, o_version or '@REPO_TAG@')
         if bins:
           print('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|{%s}%s' % (
@@ -228,25 +230,32 @@ def Categorize(file_name, default_version=None):
       attributes.append(jdk)
 
   # At this point, only the product name and version should be left.
-
   m = _PRODUCT_VERSION_RE.match(todo)
   if m:
     product = todo[0:m.end(1)]
     version = m.group(2)
     todo = todo[m.end(2):]
   else:
-    # some things are unversioned. e.g. bazelisk-os-arch.
-    sep_pos = todo.find('-')
-    if sep_pos <= 0:
-      # print('Can not find version on:', file_name, file=sys.stderr)
-      product = todo
+    # Look for a version # at the end of the text
+    m = _VERSION_RE.search(todo)
+    if m and m.end() == len(todo):
+      product = todo[0:m.start()-1]
+      version = todo[m.start():m.end()]
       todo = ''
-      version = default_version
     else:
-      version = 'head'
-      product = todo[0:sep_pos]
-      todo = todo[sep_pos:]
-
+      # some things are unversioned. e.g. bazelisk-os-arch.
+      sep_pos = todo.find('-')
+      if sep_pos <= 0:
+        # print('Can not find version on:', file_name, file=sys.stderr)
+        product = todo
+        todo = ''
+        version = default_version
+      else:
+        version = 'head'
+        product = todo[0:sep_pos]
+        todo = todo[sep_pos:]
+  while product.endswith('-') or product.endswith('.'):
+    product = product[0:len(product)-1]
   left = re.sub(r'^[- _.]*', '', todo)
   if left:
     left = ' - LEAVES(%s)' % left
@@ -286,12 +295,12 @@ def main():
     parser.print_usage()
     sys.exit(1)
 
-  storage_bucket = None
-  if args.save_cloud:
-    storage_client = storage.Client()
-    storage_bucket = storage_client.get_bucket(args.bucket)
-
   if args.command == 'update':
+    storage_bucket = None
+    if args.save_cloud:
+      storage_client = storage.Client()
+      storage_bucket = storage_client.get_bucket(args.bucket)
+
     repos = DEFAULT_REPOS
     if args.all:
       repos = github.fetch_repos('bazelbuild')
