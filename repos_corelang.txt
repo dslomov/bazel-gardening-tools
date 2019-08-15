@@ -1,3 +1,4 @@
+bazelbuild/apple_support
 bazelbuild/java_tools
 bazelbuild/rules_android
 bazelbuild/rules_apple

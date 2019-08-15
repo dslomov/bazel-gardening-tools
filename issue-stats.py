@@ -8,7 +8,7 @@ import github
 import reports
 
 
-REPOS = [
+DEFAULT_REPOS = [
   'bazelbuild/apple_support',
   'bazelbuild/bazel',
   'bazelbuild/bazel-blog',
@@ -36,28 +36,38 @@ def update_labels(repo):
     json.dump(labels, open(label_file_for_repo(repo), "w+"), indent=2)
 
 
-def update(full_update=False, verbose=False):
+def update(repos, full_update=False, verbose=False):
+    # Find the most recent issue per repo so we can do incremental update
+    # for different repos in each run.
+    repo_to_latest = {}
     if full_update:
-        db_time = None
         issues = []
     else:
         with open(database.all_issues_file) as issues_db:
             issues = json.load(issues_db)
         url_to_issue = {}
-        latest_change = None
         for issue_index in range(len(issues)):
             issue  = issues[issue_index]
             url_to_issue[issue['url']] = issue_index
             dt = database.update_time(issue)
+            repo = '/'.join(issue['repository_url'].split('/')[-2:])
+            latest_change = repo_to_latest.get(repo) or None
             if latest_change == None or latest_change < dt:
-                latest_change = dt
+                repo_to_latest[repo] = dt
         db_time = latest_change.timestamp()
 
-    for repo in REPOS:
+    for repo in repos:
+        db_time = repo_to_latest.get(repo) or None
+        if db_time:
+            db_time = db_time.timestamp()
         if verbose:
-            print("Getting issues for ", repo)
-        new_issues = github.fetch_issues(repo, "", modified_after=db_time,
-                                         verbose=verbose)
+            print("Getting issues for", repo, "after", str(db_time))
+        try:
+            new_issues = github.fetch_issues(repo, "", modified_after=db_time,
+                                             verbose=verbose)
+        except:
+            continue
+
         if full_update:
             issues.extend(new_issues)
         else:
@@ -69,8 +79,9 @@ def update(full_update=False, verbose=False):
                 else:
                     print("new issue %s" % url)
                     issues.append(issue)
+
     json.dump(issues, open(database.all_issues_file, "w+"), indent=2)
-    for repo in REPOS:
+    for repo in repos:
         if verbose:
             print("Getting labels for ", repo)
         update_labels(repo)
@@ -89,6 +100,9 @@ def main():
     update_parser.add_argument(
         "--full", action='store_true',
         help="Do a full rather than incremental update")
+    update_parser.add_argument(
+        '--repo_list_file', action='store',
+        help='Get repositories listed in this file')
 
     report_parser = subparsers.add_parser(
         "report", help="generate a full report")
@@ -134,7 +148,11 @@ def main():
     args = parser.parse_args()
 
     if args.command == "update":
-        update(args.full, args.verbose)
+        repos = DEFAULT_REPOS
+        if args.repo_list_file:
+          with open(args.repo_list_file, 'r') as rf:
+            repos = [l.strip() for l in rf.read().strip().split('\n')]
+        update(repos, args.full, args.verbose)
     elif args.command == "report":
         reports.report(args.report if args.report else reports.report_names())
     elif args.command == "garden":
