@@ -10,7 +10,10 @@ Bins = collections.namedtuple(
     'Bins',
     'product version arch os packaging installer is_bin attributes leftover')
 
+# rules_go-0.10.0.tar.gz
 _PRODUCT_VERSION_RE = re.compile(r'(\w+[-\w]*)[-_.]v?(\d+\.\d+\.\d+[a-z\d]*)[^.\D]?')
+#  bazel-toolchains-0dc4917.tar.gz
+_PRODUCT_GITHASH_RE = re.compile(r'(\w+[-\w]*)[-_.]([0-9a-f]{7})')
 _VERSION_RE = re.compile(r'[-_.]v?(\d+\.\d+\.\d+[a-z\d]*(-rc\d+)?)|(\d+\.\d+[a-z\d]*(-rc\d+)?)')
 _JDK_SPEC_RE = re.compile(r'[^a-z]?(jdk\d*)')
 
@@ -86,6 +89,7 @@ def Categorize(file_name, default_version=None):
     if jdk:
       attributes.append(jdk)
 
+
   # At this point, only the product name and version should be left.
   m = _PRODUCT_VERSION_RE.match(todo)
   if m:
@@ -93,24 +97,31 @@ def Categorize(file_name, default_version=None):
     version = m.group(2)
     todo = todo[m.end(2):]
   else:
-    # Look for a version # at the end of the text
-    m = _VERSION_RE.search(todo)
-    if m and m.end() == len(todo):
-      product = todo[0:m.start()-1]
-      version = todo[m.start():m.end()]
-      todo = ''
+    m = _PRODUCT_GITHASH_RE.match(todo)
+    if m:
+      product = todo[0:m.end(1)]
+      version = m.group(2)
+      todo = todo[m.end(2):]
     else:
-      # some things are unversioned. e.g. bazelisk-os-arch.
-      sep_pos = todo.find('-')
-      if sep_pos <= 0:
-        # print('Can not find version on:', file_name, file=sys.stderr)
-        product = todo
+      # Look for a version # at the end of the text
+      m = _VERSION_RE.search(todo)
+      if m and m.end() == len(todo):
+        product = todo[0:m.start()-1]
+        version = todo[m.start():m.end()]
         todo = ''
-        version = default_version
       else:
-        version = 'head'
-        product = todo[0:sep_pos]
-        todo = todo[sep_pos:]
+        # some things are unversioned. e.g. bazelisk-os-arch.
+        sep_pos = todo.find('-')
+        if sep_pos <= 0:
+          # print('Can not find version on:', file_name, file=sys.stderr)
+          product = todo
+          todo = ''
+          version = default_version
+        else:
+          version = 'head'
+          product = todo[0:sep_pos]
+          todo = todo[sep_pos:]
+
   while product.endswith('-') or product.endswith('.'):
     product = product[0:len(product)-1]
   left = re.sub(r'^[- _.]*', '', todo)
