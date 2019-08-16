@@ -13,7 +13,8 @@ Bins = collections.namedtuple(
 # rules_go-0.10.0.tar.gz
 _PRODUCT_VERSION_RE = re.compile(r'(\w+[-\w]*)[-_.]v?(\d+\.\d+\.\d+[a-z\d]*)[^.\D]?')
 #  bazel-toolchains-0dc4917.tar.gz
-_PRODUCT_GITHASH_RE = re.compile(r'(\w+[-\w]*)[-_.]([0-9a-f]{7})')
+#  bazel-toolchains-r123456.tar.gz
+_PRODUCT_GITHASH_RE = re.compile(r'(\w+[-\w]*)[-_.](([0-9a-f]{7})|(r\d{6}))')
 _VERSION_RE = re.compile(r'[-_.]v?(\d+\.\d+\.\d+[a-z\d]*(-rc\d+)?)|(\d+\.\d+[a-z\d]*(-rc\d+)?)')
 _JDK_SPEC_RE = re.compile(r'[^a-z]?(jdk\d*)')
 
