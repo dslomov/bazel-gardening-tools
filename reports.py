@@ -24,6 +24,49 @@ CAT_2_TEAM = {
     'category: skylark > pkg build defs': 'team-Rules-Server',
 }
 
+# github handles of Bazel team members
+# TODO(aiuto): Mark users some way at github. This is not sustainable.
+BAZEL_TEAM = (
+    "adonovan",
+    "aehlig",
+    "ahumesky",
+    "aiuto",
+    "alexeagle",
+    "allevato",
+    "aragos",
+    "brandjon",
+    "buchgr",
+    "c-parsons",
+    "cushon",
+    "cvcal",
+    "davidstanke",
+    "dbabkin",
+    "dkelmer",
+    "dslomov",
+    "fweikert",
+    "gregestren",
+    "hlopko",
+    "iirina",
+    "irengrig",
+    "ishikhman",
+    "joeleba",
+    "jin",
+    "jmmv",
+    "juliexxia",
+    "katre",
+    "laszlocsomor",
+    "laurentlb",
+    "meisterT",
+    "meteorcloudy",
+    "oquenchil",
+    "rupertks",
+    "scentini",
+    "serynth",
+    "susinmotion",
+    "tetromino",
+    "vladmos",
+)
+
 #
 # Helpers
 #
@@ -160,6 +203,7 @@ def make_console_printer(
         show_number=True,
         show_url=True,
         show_title=False,
+        show_author=False,
         show_teams=False):
     """A customizable console printer."""
 
@@ -173,6 +217,8 @@ def make_console_printer(
             output.append(("{: <4}", latest_update_days_ago(issue)))
         if show_number:
             output.append(("{: <4}", issue["number"]))
+        if show_author:
+            output.append(("{: <12}", issue["user"]["login"]))
         if show_url:
             output.append(("{: <47}", issue_url(issue)))
         if show_title:
@@ -277,6 +323,29 @@ def breaking_changes_1_0(reporter, issues):
         predicate=predicate,
         printer=printer)
 
+
+def pr_backlog(reporter, issues, is_team=True):
+    def predicate(issue):
+        return \
+            is_open(issue) \
+            and is_pull_request(issue) \
+            and has_cla(issue) \
+            and is_stale(issue, 30) \
+            and not work_in_progress(issue) \
+            and (
+                not is_team
+                or issue["user"]["login"] in BAZEL_TEAM)
+
+
+    reporter(
+        issues,
+        header="Stale pull requests ...",
+        predicate=predicate,
+        printer=make_console_printer(
+            show_age=True, show_number=True, show_author=True, show_title=True))
+
+
+
 _REPORTS = {
     "more_than_one_team":
         lambda issues: more_than_one_team(print_report, issues),
@@ -290,7 +359,9 @@ _REPORTS = {
     "stale_pull_requests_14d":
         lambda issues: stale_pull_requests(print_report, issues, 14),
     "breaking_changes_1.0":
-        lambda issues: breaking_changes_1_0(print_report, issues)
+        lambda issues: breaking_changes_1_0(print_report, issues),
+    "team_pr_backlog":
+        lambda issues: pr_backlog(print_report, issues, is_team=True),
 }
 
 
