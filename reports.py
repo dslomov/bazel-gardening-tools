@@ -170,15 +170,23 @@ def has_cla(issue):
 #
 
 
-def print_report(issues, header, predicate, printer):
+def print_report(issues, header, predicate, printer, sort_keys=None):
     print(header)
     count = 0
-    for issue in issues:
-        if predicate(issue):
-            count = count + 1
-            print(printer(issue))
+    for issue in get_sorted_issues(issues, predicate, sort_keys):
+        count = count + 1
+        print(printer(issue))
     print("%d issues" % count)
     print("---------------------------")
+
+
+def get_sorted_issues(issues, predicate, sort_keys):
+    filtered = filter(predicate, issues)
+    if not sort_keys:
+        return filtered
+    for key, rev in sort_keys:
+        filtered = sorted(filtered, key=key, reverse=rev)
+    return filtered
 
 
 def print_report_group_by_team(issues, header, predicate, printer):
@@ -336,14 +344,18 @@ def pr_backlog(reporter, issues, is_team=True):
                 not is_team
                 or issue["user"]["login"] in BAZEL_TEAM)
 
-
     reporter(
         issues,
-        header="Stale pull requests ...",
+        header="age | pr | owner | url | title",
         predicate=predicate,
         printer=make_console_printer(
-            show_age=True, show_number=True, show_author=True, show_title=True))
-
+            show_age=True, show_number=True, show_author=True, show_title=True),
+        sort_keys = [
+            # TODO(aiuto): secondary sort first
+            (lambda issue: latest_update_days_ago(issue), True),
+            (lambda issue: issue["user"]["login"], False),
+        ]
+    )
 
 
 _REPORTS = {
