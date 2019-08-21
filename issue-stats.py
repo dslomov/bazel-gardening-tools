@@ -90,6 +90,9 @@ def update(repos, full_update=False, verbose=False):
 def main():
     parser = argparse.ArgumentParser(
         description="Gather Bazel's issues and pull requests data")
+    parser.add_argument(
+        '--user_list_file',
+        help='File of github handles used to filter reports by user.')
 
     parser.add_argument('--verbose', action='store_true',
                         help='Be more verbose')
@@ -103,9 +106,6 @@ def main():
     update_parser.add_argument(
         '--repo_list_file', action='store',
         help='Get repositories listed in this file')
-
-    report_parser = subparsers.add_parser(
-        "report", help="generate a full report")
 
     garden_parser = subparsers.add_parser(
         "garden",
@@ -132,6 +132,8 @@ def main():
     html_parser = subparsers.add_parser(
         "html", help="generate HTML for issues/pull requests that need attention")
 
+    report_parser = subparsers.add_parser(
+        "report", help="generate a full report")
     report_selector = report_parser.add_mutually_exclusive_group()
     report_selector.add_argument(
         '-a',
@@ -145,8 +147,12 @@ def main():
         action="append",
         choices=reports.report_names(),
         help="show selected report (multiple values possible)")
-    args = parser.parse_args()
 
+    args = parser.parse_args()
+    user_list = None
+    if args.user_list_file:
+      with open(args.user_list_file, 'r') as inp:
+        user_list = [x.strip() for x in inp.read().split('\n')]
     if args.command == "update":
         repos = DEFAULT_REPOS
         if args.repo_list_file:
@@ -154,7 +160,8 @@ def main():
             repos = [l.strip() for l in rf.read().strip().split('\n')]
         update(repos, args.full, args.verbose)
     elif args.command == "report":
-        reports.report(args.report if args.report else reports.report_names())
+        reports.report(args.report if args.report else reports.report_names(),
+                       user_filter=user_list)
     elif args.command == "garden":
         reports.garden(args.list_issues, args.list_pull_requests, args.stale_for_days)
     elif args.command == "html":

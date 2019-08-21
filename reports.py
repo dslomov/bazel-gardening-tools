@@ -24,49 +24,6 @@ CAT_2_TEAM = {
     'category: skylark > pkg build defs': 'team-Rules-Server',
 }
 
-# github handles of Bazel team members
-# TODO(aiuto): Mark users some way at github. This is not sustainable.
-BAZEL_TEAM = (
-    "adonovan",
-    "aehlig",
-    "ahumesky",
-    "aiuto",
-    "alexeagle",
-    "allevato",
-    "aragos",
-    "brandjon",
-    "buchgr",
-    "c-parsons",
-    "cushon",
-    "cvcal",
-    "davidstanke",
-    "dbabkin",
-    "dkelmer",
-    "dslomov",
-    "fweikert",
-    "gregestren",
-    "hlopko",
-    "iirina",
-    "irengrig",
-    "ishikhman",
-    "joeleba",
-    "jin",
-    "jmmv",
-    "juliexxia",
-    "katre",
-    "laszlocsomor",
-    "laurentlb",
-    "meisterT",
-    "meteorcloudy",
-    "oquenchil",
-    "rupertks",
-    "scentini",
-    "serynth",
-    "susinmotion",
-    "tetromino",
-    "vladmos",
-)
-
 #
 # Helpers
 #
@@ -332,7 +289,7 @@ def breaking_changes_1_0(reporter, issues):
         printer=printer)
 
 
-def pr_backlog(reporter, issues, is_team=True):
+def pr_backlog(reporter, issues, user_list=None):
     def predicate(issue):
         return \
             is_open(issue) \
@@ -341,8 +298,8 @@ def pr_backlog(reporter, issues, is_team=True):
             and is_stale(issue, 30) \
             and not work_in_progress(issue) \
             and (
-                not is_team
-                or issue["user"]["login"] in BAZEL_TEAM)
+                not user_list
+                or issue["user"]["login"] in user_list)
 
     reporter(
         issues,
@@ -360,27 +317,28 @@ def pr_backlog(reporter, issues, is_team=True):
 
 _REPORTS = {
     "more_than_one_team":
-        lambda issues: more_than_one_team(print_report, issues),
+        lambda issues, user_filter: more_than_one_team(print_report, issues),
     "issues_without_team":
-        lambda issues: issues_without_team(print_report, issues),
+        lambda issues, user_filter: issues_without_team(print_report, issues),
     "triaged_no_priority":
-        lambda issues: have_team_no_untriaged_no_priority(
+        lambda issues, user_filter: have_team_no_untriaged_no_priority(
             print_report_group_by_team, issues),
     "unmigrated":
-        lambda issues: issues_with_category(print_report, issues),
+        lambda issues, user_filter: issues_with_category(print_report, issues),
     "stale_pull_requests_14d":
-        lambda issues: stale_pull_requests(print_report, issues, 14),
+        lambda issues, user_filter: stale_pull_requests(print_report, issues, 14),
     "breaking_changes_1.0":
-        lambda issues: breaking_changes_1_0(print_report, issues),
+        lambda issues, user_filter: breaking_changes_1_0(print_report, issues),
     "team_pr_backlog":
-        lambda issues: pr_backlog(print_report, issues, is_team=True),
+        lambda issues, user_filter: pr_backlog(
+            print_report, issues, user_list=user_filter),
 }
 
 
-def report(which_reports):
+def report(which_reports, user_filter=None):
     issues = database.get_issues()
     for r in which_reports:
-        _REPORTS[r](issues)
+        _REPORTS[r](issues, user_filter=user_filter)
 
 
 def report_names():
