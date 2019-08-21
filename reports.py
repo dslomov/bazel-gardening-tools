@@ -127,15 +127,23 @@ def has_cla(issue):
 #
 
 
-def print_report(issues, header, predicate, printer):
+def print_report(issues, header, predicate, printer, sort_keys=None):
     print(header)
     count = 0
-    for issue in issues:
-        if predicate(issue):
-            count = count + 1
-            print(printer(issue))
+    for issue in get_sorted_issues(issues, predicate, sort_keys):
+        count = count + 1
+        print(printer(issue))
     print("%d issues" % count)
     print("---------------------------")
+
+
+def get_sorted_issues(issues, predicate, sort_keys):
+    filtered = filter(predicate, issues)
+    if not sort_keys:
+        return filtered
+    for key, rev in sort_keys:
+        filtered = sorted(filtered, key=key, reverse=rev)
+    return filtered
 
 
 def print_report_group_by_team(issues, header, predicate, printer):
@@ -160,6 +168,7 @@ def make_console_printer(
         show_number=True,
         show_url=True,
         show_title=False,
+        show_author=False,
         show_teams=False):
     """A customizable console printer."""
 
@@ -173,6 +182,8 @@ def make_console_printer(
             output.append(("{: <4}", latest_update_days_ago(issue)))
         if show_number:
             output.append(("{: <4}", issue["number"]))
+        if show_author:
+            output.append(("{: <12}", issue["user"]["login"]))
         if show_url:
             output.append(("{: <47}", issue_url(issue)))
         if show_title:
@@ -277,6 +288,30 @@ def breaking_changes_1_0(reporter, issues):
         predicate=predicate,
         printer=printer)
 
+
+def pr_backlog(reporter, issues):
+    def predicate(issue):
+        return \
+            is_open(issue) \
+            and is_pull_request(issue) \
+            and has_cla(issue) \
+            and is_stale(issue, 30) \
+            and not work_in_progress(issue)
+
+    reporter(
+        issues,
+        header="age | pr | owner | url | title",
+        predicate=predicate,
+        printer=make_console_printer(
+            show_age=True, show_number=True, show_author=True, show_title=True),
+        sort_keys = [
+            # TODO(aiuto): secondary sort first
+            (lambda issue: latest_update_days_ago(issue), True),
+            (lambda issue: issue["user"]["login"], False),
+        ]
+    )
+
+
 _REPORTS = {
     "more_than_one_team":
         lambda issues: more_than_one_team(print_report, issues),
@@ -290,14 +325,19 @@ _REPORTS = {
     "stale_pull_requests_14d":
         lambda issues: stale_pull_requests(print_report, issues, 14),
     "breaking_changes_1.0":
-        lambda issues: breaking_changes_1_0(print_report, issues)
+        lambda issues: breaking_changes_1_0(print_report, issues),
+    "team_pr_backlog":
+        lambda issues: pr_backlog(print_report, issues),
 }
 
 
-def report(which_reports):
-    issues = database.get_issues()
+def report(which_reports, user_list=None):
+    pred = None
+    if user_list:
+        pred = lambda issue: issue["user"]["login"] in user_list
+    issues = database.get_issues(predicate=pred)
     for r in which_reports:
-        _REPORTS[r](issues)
+       _REPORTS[r](issues)
 
 
 def report_names():
