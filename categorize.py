@@ -5,9 +5,9 @@ import re
 import string
 import sys
 
-# The bins we categorize artifacts as
-Bins = collections.namedtuple(
-    'Bins',
+# The buckets we categorize artifacts as
+Buckets = collections.namedtuple(
+    'Buckets',
     'product version arch os packaging installer is_bin attributes leftover')
 
 # rules_go-0.10.0.tar.gz
@@ -23,7 +23,7 @@ _MACOS_PACKAGE_EXTENSIONS = ['.dmg', '.mac', '.osx']
 _WINDOWS_PACKAGE_EXTENSIONS = ['.exe']
 
 def Categorize(file_name, default_version=None):
-  """Break down file name into bins that matter."""
+  """Break down file name into buckets that matter."""
 
   # eat away parts until todo us empty
   todo = file_name
@@ -129,8 +129,8 @@ def Categorize(file_name, default_version=None):
   if left:
     left = ' - LEAVES(%s)' % left
 
-  return Bins(product, version, arch, os, packaging, installer, is_bin,
-              '|'.join(attributes), left)
+  return Buckets(product, version, arch, os, packaging, installer, is_bin,
+                 '|'.join(attributes), left)
 
 
 def ExtractFeature(s, feature_list):

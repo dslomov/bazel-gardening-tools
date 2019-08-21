@@ -80,14 +80,14 @@ def CollectDownloadCounts(out, repos, ymd, hm):
             name_to_counts[file_name]['bin'] = count
 
         for file_name, counts in name_to_counts.items():
-          bins = categorize.Categorize(file_name, tag)
-          if bins:
+          buckets = categorize.Categorize(file_name, tag)
+          if buckets:
             out.write('%s|%s|%s|%d|%d|%d|%s|%s|%s|%s|%s|%s|%s|{%s}%s\n' % (
                 file_name, ymd, hm, counts.get('bin') or 0,
                 counts.get('sha256') or 0, counts.get('sig') or 0,
-                bins.product, bins.version, bins.arch, bins.os, bins.packaging,
-                bins.installer, bins.is_bin, bins.attributes,
-                bins.leftover))
+                buckets.product, buckets.version, buckets.arch, buckets.os,
+                buckets.packaging, buckets.installer, buckets.is_bin,
+                buckets.attributes, buckets.leftover))
 
     except urllib.error.HTTPError as e:
       print('Skipping %s: %s' % (repo, e))
@@ -111,13 +111,13 @@ def MapRawData(file_names):
         (file_name, ymd, hm, bin_count, sha_count, sig_count, o_prod,
          o_version, o_arch, o_os, o_packaging, o_installer, o_is_bin,
          o_left) = line.split('|')
-        bins = categorize.Categorize(file_name, o_version or '@REPO_TAG@')
-        if bins:
+        buckets = categorize.Categorize(file_name, o_version or '@REPO_TAG@')
+        if buckets:
           print('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|{%s}%s' % (
               file_name, ymd, hm, bin_count, sha_count, sig_count,
-              bins.product, bins.version, bins.arch, bins.os, bins.packaging,
-              bins.installer, bins.is_bin, bins.attributes,
-              bins.leftover))
+              buckets.product, buckets.version, buckets.arch, buckets.os,
+              buckets.packaging, buckets.installer, buckets.is_bin,
+              buckets.attributes, buckets.leftover))
 
 
 def main():

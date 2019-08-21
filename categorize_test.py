@@ -9,7 +9,8 @@ import categorize
 
 class CategorizeTest(unittest.TestCase):
 
-  version_re = re.compile(r'[-_.]v?(\d+\.\d+\.\d+[a-z\d]*(-rc\d+)?)|(\d+\.\d+[a-z\d]*(-rc\d+)?)')
+  version_re = re.compile(
+      r'[-_.]v?(\d+\.\d+\.\d+[a-z\d]*(-rc\d+)?)|(\d+\.\d+[a-z\d]*(-rc\d+)?)')
 
   def test_samples(self):
     with open('testdata/categorize_samples.txt', 'r') as samples:
@@ -21,17 +22,19 @@ class CategorizeTest(unittest.TestCase):
           # Only use the default version if we can not find the common version
           # pattern in the filename.
           if m:
-            bins = categorize.Categorize(file)
+            buckets = categorize.Categorize(file)
           else:
-            bins = categorize.Categorize(file, default_version=version)
-          self.assertEqual(product, bins.product)
-          self.assertEqual(version, bins.version)
-          self.assertEqual(arch, str(bins.arch))
-          self.assertEqual(os, str(bins.os))
-          self.assertEqual(packaging, str(bins.packaging))
-          self.assertEqual(installer, bins.installer)
-          self.assertEqual(is_bin, str(bins.is_bin))
-          self.assertEqual(rest, '{%s}%s' % (bins.attributes, bins.leftover))
+            buckets = categorize.Categorize(file,
+                                            default_version=version)
+          self.assertEqual(product, buckets.product)
+          self.assertEqual(version, buckets.version)
+          self.assertEqual(arch, str(buckets.arch))
+          self.assertEqual(os, str(buckets.os))
+          self.assertEqual(packaging, str(buckets.packaging))
+          self.assertEqual(installer, buckets.installer)
+          self.assertEqual(is_bin, str(buckets.is_bin))
+          self.assertEqual(rest, '{%s}%s' % (buckets.attributes,
+                                             buckets.leftover))
 
 
 if __name__ == '__main__':
