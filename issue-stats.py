@@ -161,7 +161,7 @@ def main():
         update(repos, args.full, args.verbose)
     elif args.command == "report":
         reports.report(args.report if args.report else reports.report_names(),
-                       user_filter=user_list)
+                       user_list=user_list)
     elif args.command == "garden":
         reports.garden(args.list_issues, args.list_pull_requests, args.stale_for_days)
     elif args.command == "html":

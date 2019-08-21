@@ -289,17 +289,14 @@ def breaking_changes_1_0(reporter, issues):
         printer=printer)
 
 
-def pr_backlog(reporter, issues, user_list=None):
+def pr_backlog(reporter, issues):
     def predicate(issue):
         return \
             is_open(issue) \
             and is_pull_request(issue) \
             and has_cla(issue) \
             and is_stale(issue, 30) \
-            and not work_in_progress(issue) \
-            and (
-                not user_list
-                or issue["user"]["login"] in user_list)
+            and not work_in_progress(issue)
 
     reporter(
         issues,
@@ -317,28 +314,30 @@ def pr_backlog(reporter, issues, user_list=None):
 
 _REPORTS = {
     "more_than_one_team":
-        lambda issues, user_filter: more_than_one_team(print_report, issues),
+        lambda issues: more_than_one_team(print_report, issues),
     "issues_without_team":
-        lambda issues, user_filter: issues_without_team(print_report, issues),
+        lambda issues: issues_without_team(print_report, issues),
     "triaged_no_priority":
-        lambda issues, user_filter: have_team_no_untriaged_no_priority(
+        lambda issues: have_team_no_untriaged_no_priority(
             print_report_group_by_team, issues),
     "unmigrated":
-        lambda issues, user_filter: issues_with_category(print_report, issues),
+        lambda issues: issues_with_category(print_report, issues),
     "stale_pull_requests_14d":
-        lambda issues, user_filter: stale_pull_requests(print_report, issues, 14),
+        lambda issues: stale_pull_requests(print_report, issues, 14),
     "breaking_changes_1.0":
-        lambda issues, user_filter: breaking_changes_1_0(print_report, issues),
+        lambda issues: breaking_changes_1_0(print_report, issues),
     "team_pr_backlog":
-        lambda issues, user_filter: pr_backlog(
-            print_report, issues, user_list=user_filter),
+        lambda issues: pr_backlog(print_report, issues),
 }
 
 
-def report(which_reports, user_filter=None):
-    issues = database.get_issues()
+def report(which_reports, user_list=None):
+    pred = None
+    if user_list:
+        pred = lambda issue: issue["user"]["login"] in user_list
+    issues = database.get_issues(predicate=pred)
     for r in which_reports:
-        _REPORTS[r](issues, user_filter=user_filter)
+       _REPORTS[r](issues)
 
 
 def report_names():
