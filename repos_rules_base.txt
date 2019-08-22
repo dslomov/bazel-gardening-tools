@@ -2,3 +2,5 @@ bazelbuild/bazel-skylib
 bazelbuild/bazel-toolchains
 bazelbuild/bazel-federation
 bazelbuild/platforms
+bazelbuild/rules_pkg
+bazelbuild/skydoc
