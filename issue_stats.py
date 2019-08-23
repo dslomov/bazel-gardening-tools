@@ -36,25 +36,36 @@ def update_labels(repo):
     json.dump(labels, open(label_file_for_repo(repo), "w+"), indent=2)
 
 
-def update(repos, full_update=False, verbose=False):
+def build_issue_index(issues, reset_repos):
     # Find the most recent issue per repo so we can do incremental update
     # for different repos in each run.
     repo_to_latest = {}
+    url_to_issue = {}
+    for issue_index in range(len(issues)):
+        issue  = issues[issue_index]
+        url_to_issue[issue['url']] = issue_index
+        dt = database.update_time(issue)
+        repo = '/'.join(issue['repository_url'].split('/')[-2:])
+        latest_change = repo_to_latest.get(repo) or None
+        if latest_change == None or latest_change < dt:
+            repo_to_latest[repo] = dt
+    db_time = latest_change.timestamp()
+    for repo in reset_repos or []:
+      repo_to_latest[repo] = None
+    return url_to_issue, repo_to_latest
+
+
+def update(repos, full_update=False, reset_repos=None, verbose=False):
+    # Find the most recent issue per repo so we can do incremental update
+    # for different repos in each run.
     if full_update:
         issues = []
+        url_to_issue = {}
+        repo_to_latest = {}
     else:
         with open(database.all_issues_file) as issues_db:
             issues = json.load(issues_db)
-        url_to_issue = {}
-        for issue_index in range(len(issues)):
-            issue  = issues[issue_index]
-            url_to_issue[issue['url']] = issue_index
-            dt = database.update_time(issue)
-            repo = '/'.join(issue['repository_url'].split('/')[-2:])
-            latest_change = repo_to_latest.get(repo) or None
-            if latest_change == None or latest_change < dt:
-                repo_to_latest[repo] = dt
-        db_time = latest_change.timestamp()
+        url_to_issue, repo_to_latest = build_issue_index(issues, reset_repos)
 
     for repo in repos:
         db_time = repo_to_latest.get(repo) or None
@@ -104,8 +115,14 @@ def main():
         "--full", action='store_true',
         help="Do a full rather than incremental update")
     update_parser.add_argument(
+        '--repo', action='append',
+        help='Repository to do an update for. May be repeated.')
+    update_parser.add_argument(
         '--repo_list_file', action='store',
         help='Get repositories listed in this file')
+    update_parser.add_argument(
+        '--reset_repo', action='append',
+        help='Specific repository to do a full update for.')
 
     garden_parser = subparsers.add_parser(
         "garden",
@@ -155,10 +172,12 @@ def main():
         user_list = [x.strip() for x in inp.read().split('\n')]
     if args.command == "update":
         repos = DEFAULT_REPOS
-        if args.repo_list_file:
+        if args.repo:
+          repos = args.repo
+        elif args.repo_list_file:
           with open(args.repo_list_file, 'r') as rf:
             repos = [l.strip() for l in rf.read().strip().split('\n')]
-        update(repos, args.full, args.verbose)
+        update(repos, args.full, args.reset_repo, args.verbose)
     elif args.command == "report":
         reports.report(args.report if args.report else reports.report_names(),
                        user_list=user_list)
@@ -170,4 +189,5 @@ def main():
         parser.print_usage()
 
 
-main()
+if __name__ == '__main__':
+  main()
