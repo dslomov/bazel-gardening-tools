@@ -9,6 +9,8 @@ import issue_stats
 class IssueStatsTest(unittest.TestCase):
 
   def setUp(self):
+    # This is just a frozen copy of a database sample as of 2019-08-23. If you
+    # update it by taking a new sample, You will have to adjust the counts.
     with open('testdata/issue_db.json', 'r') as issues_db:
       self.issues = json.load(issues_db)
 

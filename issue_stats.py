@@ -41,8 +41,7 @@ def build_issue_index(issues, reset_repos):
     # for different repos in each run.
     repo_to_latest = {}
     url_to_issue = {}
-    for issue_index in range(len(issues)):
-        issue  = issues[issue_index]
+    for issue_index, issue in enumerate(issues):
         url_to_issue[issue['url']] = issue_index
         dt = database.update_time(issue)
         repo = '/'.join(issue['repository_url'].split('/')[-2:])
@@ -122,7 +121,7 @@ def main():
         help='Get repositories listed in this file')
     update_parser.add_argument(
         '--reset_repo', action='append',
-        help='Specific repository to do a full update for.')
+        help='Specific repository to do a full update for. May be repeated')
 
     garden_parser = subparsers.add_parser(
         "garden",
