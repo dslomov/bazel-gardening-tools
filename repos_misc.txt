@@ -6,4 +6,5 @@ bazelbuild/intellij
 bazelbuild/rules_docker
 bazelbuild/rules_jvm_external
 bazelbuild/rules_k8s
+bazelbuild/rules_nodejs
 bazelbuild/rules_sass

@@ -10,12 +10,24 @@ Buckets = collections.namedtuple(
     'Buckets',
     'product version arch os packaging installer is_bin attributes leftover')
 
-# rules_go-0.10.0.tar.gz
+# Capture well known version patterns
+_VERSION_RE = re.compile(''.join([
+    r'[-_.]'
+    r'v?',  # preceed by separator, with an optional 'v', which we strip
+    # classic m.n.p with optional '-alpha-N'
+    r'(\d+\.\d+\.\d+-((alpha)|(beta)|(gamma))[.-]?\d+)',
+    r'|(\d+\.\d+\.\d+(-?rc\d+)?)', # m.n.p-RCN
+    r'|(\d+\.\d+\.\d+[abcdefg]?)',
+    r'|(\d+\.\d+[abcdefg])',
+    r'|(\d+\.\d+(-?rc\d+)?)',    # m.n-rcN
+    ]))
+
 _PRODUCT_VERSION_RE = re.compile(r'(\w+[-\w]*)[-_.]v?(\d+\.\d+\.\d+[a-z\d]*)[^.\D]?')
 #  bazel-toolchains-0dc4917.tar.gz
 #  bazel-toolchains-r123456.tar.gz
 _PRODUCT_GITHASH_RE = re.compile(r'(\w+[-\w]*)[-_.](([0-9a-f]{7})|(r\d{6}))')
-_VERSION_RE = re.compile(r'[-_.]v?(\d+\.\d+\.\d+[a-z\d]*(-rc\d+)?)|(\d+\.\d+[a-z\d]*(-rc\d+)?)')
+
+
 _JDK_SPEC_RE = re.compile(r'[^a-z]?(jdk\d*)')
 
 _LINUX_PACKAGE_EXTENSIONS = ['.sh', '.deb', '.rpm', '.zip', '.tar.gz', '.tgz']
@@ -92,24 +104,26 @@ def Categorize(file_name, default_version=None):
 
 
   # At this point, only the product name and version should be left.
-  m = _PRODUCT_VERSION_RE.match(todo)
-  if m:
-    product = todo[0:m.end(1)]
-    version = m.group(2)
-    todo = todo[m.end(2):]
+
+  m = _VERSION_RE.search(todo)
+  if m and m.end() == len(todo):
+    product = todo[0:m.start()].rstrip('-._')
+    if product.endswith('-v'):
+      product = product[0:-2]
+    version = todo[m.start():m.end()].lstrip('-._')
+    todo = ''
   else:
-    m = _PRODUCT_GITHASH_RE.match(todo)
+    m = _PRODUCT_VERSION_RE.match(todo)
     if m:
       product = todo[0:m.end(1)]
       version = m.group(2)
       todo = todo[m.end(2):]
     else:
-      # Look for a version # at the end of the text
-      m = _VERSION_RE.search(todo)
-      if m and m.end() == len(todo):
-        product = todo[0:m.start()-1]
-        version = todo[m.start():m.end()]
-        todo = ''
+      m = _PRODUCT_GITHASH_RE.match(todo)
+      if m:
+        product = todo[0:m.end(1)]
+        version = m.group(2)
+        todo = todo[m.end(2):]
       else:
         # some things are unversioned. e.g. bazelisk-os-arch.
         sep_pos = todo.find('-')
