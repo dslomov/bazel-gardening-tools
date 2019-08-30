@@ -11,16 +11,16 @@ Buckets = collections.namedtuple(
     'product version arch os packaging installer is_bin attributes leftover')
 
 # Capture well known version patterns
-_VERSION_RE = re.compile(''.join([
-    r'[-_.]'
-    r'v?',  # preceed by separator, with an optional 'v', which we strip
+_VERSION_RE = re.compile(
+    r'[-_.]'  # preceed by separator
+    r'v?'  # with an optional 'v', which we strip in code
     # classic m.n.p with optional '-alpha-N'
-    r'(\d+\.\d+\.\d+-((alpha)|(beta)|(gamma))[.-]?\d+)',
-    r'|(\d+\.\d+\.\d+(-?rc\d+)?)', # m.n.p-RCN
-    r'|(\d+\.\d+\.\d+[abcdefg]?)',
-    r'|(\d+\.\d+[abcdefg])',
-    r'|(\d+\.\d+(-?rc\d+)?)',    # m.n-rcN
-    ]))
+    r'(\d+\.\d+\.\d+-((alpha)|(beta)|(gamma))[.-]?\d+)'
+    r'|(\d+\.\d+\.\d+(-?rc\d+)?)'  # m.n.p-RCN
+    r'|(\d+\.\d+\.\d+[abcdefg]?)'
+    r'|(\d+\.\d+[abcdefg])'  # 1.0a
+    r'|(\d+\.\d+(-?rc\d+)?)'  # m.n-rcN
+    )
 
 _PRODUCT_VERSION_RE = re.compile(r'(\w+[-\w]*)[-_.]v?(\d+\.\d+\.\d+[a-z\d]*)[^.\D]?')
 #  bazel-toolchains-0dc4917.tar.gz
