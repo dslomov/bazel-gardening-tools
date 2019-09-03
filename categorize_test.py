@@ -26,15 +26,17 @@ class CategorizeTest(unittest.TestCase):
           else:
             buckets = categorize.Categorize(file,
                                             default_version=version)
-          self.assertEqual(product, buckets.product)
-          self.assertEqual(version, buckets.version)
-          self.assertEqual(arch, str(buckets.arch))
-          self.assertEqual(os, str(buckets.os))
-          self.assertEqual(packaging, str(buckets.packaging))
-          self.assertEqual(installer, buckets.installer)
-          self.assertEqual(is_bin, str(buckets.is_bin))
-          self.assertEqual(rest, '{%s}%s' % (buckets.attributes,
-                                             buckets.leftover))
+          self.assertEqual(product, buckets.product, str(buckets))
+          self.assertEqual(version, buckets.version, str(buckets))
+          self.assertEqual(arch, str(buckets.arch), str(buckets))
+          self.assertEqual(os, str(buckets.os), str(buckets))
+          self.assertEqual(packaging, str(buckets.packaging), str(buckets))
+          self.assertEqual(installer, buckets.installer, str(buckets))
+          self.assertEqual(is_bin, str(buckets.is_bin), str(buckets))
+          self.assertEqual(
+              rest,
+              '{%s}%s' % (buckets.attributes, buckets.leftover),
+              str(buckets))
 
 
 if __name__ == '__main__':

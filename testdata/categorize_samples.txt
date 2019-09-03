@@ -790,3 +790,12 @@ unused_deps.mac|unused_deps|0.25.0|None|None|mac|standalone|True|{}
 unused_deps.osx|unused_deps|0.11.1|None|macos|None|standalone|True|{}
 unused_deps|unused_deps|0.11.1|None|None|None|standalone|True|{}
 unused_deps|unused_deps|0.19.2.1|None|None|None|standalone|True|{}
+rules_nodejs-0.26.0-beta.0.tar.gz|rules_nodejs|0.26.0-beta.0|src|any|tar.gz|standalone|True|{}
+bazel-1.0.0-rc1-linux-x86_64|bazel|1.0.0-rc1|x86_64|linux|None|standalone|True|{}
+bazel-1.0.0rc2-linux-x86_64|bazel|1.0.0rc2|x86_64|linux|None|standalone|True|{}
+bazel-1.0-rc1-linux-x86_64|bazel|1.0-rc1|x86_64|linux|None|standalone|True|{}
+bazel-1.0rc2-linux-x86_64|bazel|1.0rc2|x86_64|linux|None|standalone|True|{}
+bazel-0.8.tar.gz|bazel|0.8|src|any|tar.gz|standalone|True|{}
+endsinv-0.8.tar.gz|endsinv|0.8|src|any|tar.gz|standalone|True|{}
+endsinv-0.8b.tar.gz|endsinv|0.8b|src|any|tar.gz|standalone|True|{}
+endsinv-0.8.0c.tar.gz|endsinv|0.8.0c|src|any|tar.gz|standalone|True|{}
