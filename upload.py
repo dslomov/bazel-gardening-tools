@@ -23,6 +23,10 @@ DownloadSample.__new__.__defaults__ = (None,) * 14
 _EPOCH = datetime.datetime.strptime('2019-01-01', '%Y-%m-%d')
 _VERBOSE = False
 
+# Report changes if they are over a given size and jumped by the given
+# percentage
+_MIN_DOWNLOADS_FOR_REPORTING = 10
+_PERCENTAGE_CHANGE_TO_REPORT = 1.15
 
 def none_to_null(s):
   if s == 'None':
@@ -197,7 +201,8 @@ class DailyCountUploader(object):
       # assert: no need to backfill: downloads is what we got today
       # assert: with backfill: downloads holds ~avg/day change over period
       # assert: skip backfill: downloads holds multi-day delta
-      if (downloads > 10) and (previous.downloads * 115 // 100 < downloads):
+      if (downloads > _MIN_DOWNLOADS_FOR_REPORTING
+          and int(previous.downloads * _PERCENTAGE_CHANGE_TO_REPORT) < downloads):
         print(sample.product, sample.file, sample.version,
               sample.sample_date, downloads,
               'large jump from %d' % previous.downloads)
