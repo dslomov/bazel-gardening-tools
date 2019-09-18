@@ -140,6 +140,15 @@ class DailyCountUploader(object):
       self.connection.commit()
 
   def process_sample(self, sample):
+    """Handle a download record.
+
+    - compute download delta from previous (or earlier) day
+    - (maybe) smooth sample over all days since last sample
+
+    Args:
+      sample: DownloadSample
+    """
+
     sample_dt = datetime.datetime.strptime(sample.sample_date, '%Y-%m-%d')
     sample_day = (sample_dt - _EPOCH).days
     downloads = sha256 = sig = 0
