@@ -142,7 +142,7 @@ class DailyCountUploader(object):
   def process_sample(self, sample):
     sample_dt = datetime.datetime.strptime(sample.sample_date, '%Y-%m-%d')
     sample_day = (sample_dt - _EPOCH).days
-    downloads = sha256 = sig= 0
+    downloads = sha256 = sig = 0
 
     if self.history.get(
         (sample.product, sample.file, sample.version, sample_day)):
