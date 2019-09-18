@@ -6,15 +6,7 @@ import unittest
 
 import upload
 
-_VERBOSE = False
-
-
-def str_to_dt(s):
-  return datetime.datetime.strptime(s, '%Y-%m-%d')
-
-
-def dt_to_str(dt):
-  return dt.strftime('%Y-%m-%d')
+_VERBOSE = True
 
 
 class UploadTest(unittest.TestCase):
@@ -33,9 +25,7 @@ class UploadTest(unittest.TestCase):
 
   def prep_history(self, fake_history):
     for fake in fake_history:
-      sample_date = fake[0]
-      sample_dt = str_to_dt(sample_date)
-      sample_day = (sample_dt - upload._EPOCH).days
+      sample_date = upload.str_to_date(fake[0])
       product = fake[1]
       version = fake[2]
       downloads = fake[3]
@@ -51,7 +41,8 @@ class UploadTest(unittest.TestCase):
           sha256_total=sha256,
           sig_total=sig)
       self.uploader.new_sample(
-          fake_download_sample, sample_day, downloads, sha256, sig)
+          fake_download_sample, downloads, sha256, sig,
+          sample_date=sample_date)
     if _VERBOSE:
       for k, v in self.uploader.history.items():
         print(k, v.downloads_total, v.sha256_total, v.sig_total)
@@ -63,10 +54,9 @@ class UploadTest(unittest.TestCase):
     self.prep_history([
         ('2019-09-03', product, version, 50, 30, 10),
     ])
-    last_dt = str_to_dt('2019-09-03')
 
     file = '%s-%s' % (product, version)
-    sample_date = '2019-09-04'
+    sample_date = upload.str_to_date('2019-09-04')
 
     delta_downloads = 70
     delta_sha256 = 60
@@ -94,10 +84,10 @@ class UploadTest(unittest.TestCase):
     self.prep_history([
         ('2019-09-03', product, version, 50, 30, 10),
     ])
-    last_dt = str_to_dt('2019-09-03')
+    last_dt = upload.str_to_date('2019-09-03')
 
     file = '%s-%s' % (product, version)
-    sample_date = '2019-09-08'  # backfill 4 days
+    sample_date = upload.str_to_date('2019-09-08')  # backfill 4 days
     n_backfill = 4
 
     delta_downloads = 70
@@ -110,7 +100,7 @@ class UploadTest(unittest.TestCase):
         product=product,
         version=version,
         downloads_total=50 + delta_downloads * (n_backfill + 1) + 1,
-        sha256_total=30 + delta_sha256 * (n_backfill  + 1)+ 2,
+        sha256_total=30 + delta_sha256 * (n_backfill  + 1) + 2,
         sig_total=10 + delta_sig * (n_backfill + 1) + 3)
     self.uploader.process_sample(s)
 
@@ -121,7 +111,7 @@ class UploadTest(unittest.TestCase):
     self.assertEqual(n_backfill+1, len(self.samples_added))
     for n in range(n_backfill):
       self.assertEqual(
-          dt_to_str(last_dt + datetime.timedelta(days=n+1)),
+          last_dt + datetime.timedelta(days=n+1),
           self.samples_added[n].sample_date)
       self.assertEqual(
           (s.downloads_total - 50) // (n_backfill + 1),

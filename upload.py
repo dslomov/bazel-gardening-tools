@@ -20,9 +20,12 @@ DownloadSample = collections.namedtuple(
     ' downloads downloads_total sha256 sha256_total sig sig_total')
 DownloadSample.__new__.__defaults__ = (None,) * 14
 
-_EPOCH = datetime.datetime.strptime('2019-01-01', '%Y-%m-%d')
 _VERBOSE = False
 
+# Report changes if they are over a given size and jumped by the given
+# percentage
+_MIN_DOWNLOADS_FOR_REPORTING = 10
+_PERCENTAGE_CHANGE_TO_REPORT = 1.15
 
 def none_to_null(s):
   if s == 'None':
@@ -30,11 +33,15 @@ def none_to_null(s):
   return s
 
 
+def str_to_date(s):
+  return datetime.datetime.strptime(s, '%Y-%m-%d').date()
+
+def date_to_str(dt):
+  return dt.strftime('%Y-%m-%d')
+
+
 def gather_previous_downloads(connection, trailing_days):
   """Get trailing_days worth of download records.
-
-  We work in a 'days from 2019-01-01' system, so that the 'day' of any sample
-  is from that rather than a date type.
 
   Args:
     trailing_days: Number of days to look back in histroy.
@@ -42,7 +49,7 @@ def gather_previous_downloads(connection, trailing_days):
     map: (product, filename, version, day) -> DownloadSample
   """
   ret = {}
-  max_day = 0
+  max_day = str_to_date('2019-01-01')
   with connection.cursor() as cursor:
     cursor.execute(
         """
@@ -90,7 +97,7 @@ def gather_previous_downloads(connection, trailing_days):
             extension='',
             installer='')
         max_day = sample_date if sample_date > max_day else max_day
-  print('Maximum day is %d' % max_day)
+  print('Maximum day is', date_to_str(max_day))
   return ret
 
 
@@ -98,6 +105,8 @@ class DailyCountUploader(object):
 
   def __init__(self, history, connection, window=1, backfill=True,
                dry_run=True):
+    # map: (product, filename, version, date) -> DownloadSample
+    # Note that date is datetime.date, not a string of the date.
     self.history = history
     self.connection = connection
     self.window = window
@@ -117,7 +126,7 @@ class DailyCountUploader(object):
         parts = line.strip().split('|')
         sample = DownloadSample(
             file=parts[0],
-            sample_date=parts[1],
+            sample_date=str_to_date(parts[1]),
             downloads_total=int(parts[3]),
             sha256_total=int(parts[4]),
             sig_total=int(parts[5]),
@@ -137,7 +146,15 @@ class DailyCountUploader(object):
       self.connection.commit()
 
   def process_sample(self, sample):
-    sample_dt = datetime.datetime.strptime(sample.sample_date, '%Y-%m-%d')
+    """Handle a download record.
+
+    - compute download delta from previous (or earlier) day
+    - (maybe) smooth sample over all days since last sample
+
+    Args:
+      sample: DownloadSample
+    """
+
     downloads = sha256 = sig = 0
 
     if self.history.get(
@@ -147,9 +164,9 @@ class DailyCountUploader(object):
 
     previous = None
     days_to_previous = 0
-    while not previous and days_to_previous < self.window:
+    while not previous and days_to_previous <= self.window:
       days_to_previous += 1
-      previous_dt = sample_dt - datetime.timedelta(days=days_to_previous)
+      previous_dt = sample.sample_date - datetime.timedelta(days=days_to_previous)
       previous = self.history.get(
           (sample.product, sample.file, sample.version, previous_dt))
 
@@ -161,24 +178,25 @@ class DailyCountUploader(object):
       sha256 = sample.sha256_total - previous.sha256_total
       sig = sample.sig_total - previous.sig_total
 
-      fill_days = (sample_dt - previous_dt).days
-      if fill_days != days_to_previous - 1:
-        print("GOT WRONG CALC for fill_days %d %d" % (fill_days, days_to_previous))
+      days_to_fill = (sample.sample_date - previous_dt).days - 1
+      if days_to_fill != days_to_previous - 1:
+        print("GOT WRONG CALC for days_to_fill %d %d" % (
+            days_to_fill, days_to_previous))
         return
 
-      if self.backfill and fill_days > 1:
+      if self.backfill and days_to_fill > 1:
         # backfill algorithm:
         # - spread delta over all the days to be inserted. this includes
         #   the sample for today
         # - leave any rounding error in the sample for today.
-        inc_downloads = downloads // fill_days
-        inc_sha256 = sha256 // fill_days
-        inc_sig = sig // fill_days
+        inc_downloads = downloads // days_to_fill
+        inc_sha256 = sha256 // days_to_fill
+        inc_sig = sig // days_to_fill
 
         for fill_index in range(days_to_fill):
           dt = previous_dt + datetime.timedelta(days=fill_index+1)
           filler = self.new_sample(sample, inc_downloads, inc_sha256, inc_sig,
-                                   sample_date=dt_to_str(dt))
+                                   sample_date=dt)
           print('backfill: %s %s %s %s' % (
               filler.sample_date, filler.product, filler.version,
               filler.downloads))
@@ -190,7 +208,8 @@ class DailyCountUploader(object):
       # assert: no need to backfill: downloads is what we got today
       # assert: with backfill: downloads holds ~avg/day change over period
       # assert: skip backfill: downloads holds multi-day delta
-      if (downloads > 10) and (previous.downloads * 115 // 100 < downloads):
+      if (downloads > _MIN_DOWNLOADS_FOR_REPORTING
+          and int(previous.downloads * _PERCENTAGE_CHANGE_TO_REPORT) < downloads):
         print(sample.product, sample.file, sample.version,
               sample.sample_date, downloads,
               'large jump from %d' % previous.downloads)
