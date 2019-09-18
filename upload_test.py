@@ -110,7 +110,7 @@ class UploadTest(unittest.TestCase):
         product=product,
         version=version,
         downloads_total=50 + delta_downloads * (n_backfill + 1) + 1,
-        sha256_total=30 + delta_sha256 * (n_backfill  + 1)+ 2,
+        sha256_total=30 + delta_sha256 * (n_backfill  + 1) + 2,
         sig_total=10 + delta_sig * (n_backfill + 1) + 3)
     self.uploader.process_sample(s)
 
