@@ -254,6 +254,4 @@ The current list of predicates are:
 *   is_pull_request
 *   is_open
 
-See
-[code](reports.py)(https://github.com/dslomov/bazel-gardening-tools/blob/19ba27a34b46bace0c98bcda84e79124e06cfdf6/reports.py#L63)</code>
-for how these are defined.
+See [code](reports.py) for how these are defined.
