@@ -6,7 +6,7 @@ import unittest
 
 import upload
 
-_VERBOSE = True
+_VERBOSE = False
 
 
 class UploadTest(unittest.TestCase):

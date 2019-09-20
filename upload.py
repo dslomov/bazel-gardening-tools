@@ -166,9 +166,9 @@ class DailyCountUploader(object):
     days_to_previous = 0
     while not previous and days_to_previous <= self.window:
       days_to_previous += 1
-      previous_dt = sample.sample_date - datetime.timedelta(days=days_to_previous)
+      previous_date = sample.sample_date - datetime.timedelta(days=days_to_previous)
       previous = self.history.get(
-          (sample.product, sample.file, sample.version, previous_dt))
+          (sample.product, sample.file, sample.version, previous_date))
 
     if not previous:
       print(sample.product, sample.file, sample.version, sample.sample_date,
@@ -178,8 +178,9 @@ class DailyCountUploader(object):
       sha256 = sample.sha256_total - previous.sha256_total
       sig = sample.sig_total - previous.sig_total
 
-      days_to_fill = (sample.sample_date - previous_dt).days - 1
-      if days_to_fill != days_to_previous - 1:
+      # days_to_fill includes today.
+      days_to_fill = (sample.sample_date - previous_date).days
+      if days_to_fill != days_to_previous:
         print("GOT WRONG CALC for days_to_fill %d %d" % (
             days_to_fill, days_to_previous))
         return
@@ -193,13 +194,14 @@ class DailyCountUploader(object):
         inc_sha256 = sha256 // days_to_fill
         inc_sig = sig // days_to_fill
 
-        for fill_index in range(days_to_fill):
-          dt = previous_dt + datetime.timedelta(days=fill_index+1)
+        for fill_index in range(1, days_to_fill):
+          dt = previous_date + datetime.timedelta(days=fill_index)
           filler = self.new_sample(sample, inc_downloads, inc_sha256, inc_sig,
                                    sample_date=dt)
-          print('backfill: %s %s %s %s' % (
+          # TODO(aiuto): Guard this with _VERBOSE after more flight time.
+          print('backfill: %s %s %s: delta=%d, fill/day=%s' % (
               filler.sample_date, filler.product, filler.version,
-              filler.downloads))
+              downloads, filler.downloads))
           self.add_daily_counts(filler)
           downloads -= inc_downloads
           sha256 -= inc_sha256
