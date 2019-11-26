@@ -1,35 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
-import collections
-import datetime
-import io
-import sys
 import urllib
 
-# from google.cloud import storage
-import categorize
 import github
 
-
-DEFAULT_REPOS_BIG = [
-    'bazelbuild/bazel',
-    'bazelbuild/bazel-gazelle',
-    'bazelbuild/bazelisk',
-    'bazelbuild/bazel-skylib',
-    'bazelbuild/bazel-website',
-    'bazelbuild/buildtools',
-    'bazelbuild/rules_android',
-    'bazelbuild/rules_apple',
-    'bazelbuild/rules_cc',
-    'bazelbuild/rules_docker',
-    'bazelbuild/rules_foreign_cc',
-    'bazelbuild/rules_kotlin',
-    'bazelbuild/rules_python',
-    'bazelbuild/rules_rust',
-    'bazelbuild/skydoc',
-    'bazelbuild/starlark',
-]
 
 DEFAULT_REPOS = [
     'bazelbuild/bazel',
