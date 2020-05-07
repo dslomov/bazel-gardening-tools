@@ -311,6 +311,21 @@ def pr_backlog(reporter, issues):
         ]
     )
 
+def open_issues_by_repo(issues, labels=None):
+    def predicate(issue):
+      if not labels:
+        return is_open(issue)
+      return is_open(issue) and get_any_of_labels(issue, labels)
+
+    repos = collections.defaultdict(int)
+    for issue in filter(predicate, issues):
+      repo = issue['repository_url'].split('/')[-1:][0]
+      repos[repo] += 1
+
+    repo_names = sorted(repos.keys())
+    print(','.join('%s' % r for r in repo_names))
+    print(','.join('%d' % repos[r] for r in repo_names))
+
 
 _REPORTS = {
     "more_than_one_team":
@@ -328,6 +343,11 @@ _REPORTS = {
         lambda issues: breaking_changes_1_0(print_report, issues),
     "team_pr_backlog":
         lambda issues: pr_backlog(print_report, issues),
+    "open_issues_by_repo":
+        lambda issues: open_issues_by_repo(issues),
+    "open_doc_issues_by_repo":
+    lambda issues: open_issues_by_repo(
+        issues, labels=['documentation', 'type: documentation']),
 }
 
 
