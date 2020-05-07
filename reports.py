@@ -317,14 +317,33 @@ def open_issues_by_repo(issues, labels=None):
         return is_open(issue)
       return is_open(issue) and get_any_of_labels(issue, labels)
 
-    repos = collections.defaultdict(int)
+    repos = {}
     for issue in filter(predicate, issues):
       repo = issue['repository_url'].split('/')[-1:][0]
-      repos[repo] += 1
+      if not repo in repos:
+        repos[repo] = collections.defaultdict(int)
+      repos[repo]['all'] += 1
+      if get_any_of_labels(issue, ['documentation', 'type: documentation']):
+        repos[repo]['docs'] += 1
+      has_priority = False
+      for priority in ('P0', 'P1', 'P2', 'P3', 'P4'):
+        if has_label(issue, priority):
+          repos[repo][priority] += 1
+          has_priority = True
+          break
+      if not has_priority:
+          repos[repo]['unprioritized'] += 1
 
     repo_names = sorted(repos.keys())
-    print(','.join('%s' % r for r in repo_names))
-    print(','.join('%d' % repos[r] for r in repo_names))
+    today_label = datetime.datetime.now().strftime('%Y-%m-%d')
+    print(today_label, 'all', ','.join('%s' % r for r in repo_names))
+    print(today_label, 'all',
+          ','.join('%d' % repos[r].get('all', 0) for r in repo_names))
+    print(today_label, 'docs',
+          ','.join('%d' % repos[r].get('docs', 0) for r in repo_names))
+    for priority in ('P0', 'P1', 'P2', 'P3', 'P4', 'unprioritized'):
+      print(today_label, priority,
+            ','.join('%d' % repos[r].get(priority, 0) for r in repo_names))
 
 
 _REPORTS = {
