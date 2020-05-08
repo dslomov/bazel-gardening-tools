@@ -336,14 +336,15 @@ def open_issues_by_repo(issues, labels=None):
 
     repo_names = sorted(repos.keys())
     today_label = datetime.datetime.now().strftime('%Y-%m-%d')
-    print(today_label, 'all', ','.join('%s' % r for r in repo_names))
-    print(today_label, 'all',
-          ','.join('%d' % repos[r].get('all', 0) for r in repo_names))
-    print(today_label, 'docs',
-          ','.join('%d' % repos[r].get('docs', 0) for r in repo_names))
+    print(','.join([today_label, ''] +
+                   ['%s' % r for r in repo_names]))
+    print(','.join([today_label, 'all'] +
+                   ['%d' % repos[r].get('all', 0) for r in repo_names]))
+    print(','.join([today_label, 'docs'] +
+                   ['%d' % repos[r].get('docs', 0) for r in repo_names]))
     for priority in ('P0', 'P1', 'P2', 'P3', 'P4', 'unprioritized'):
-      print(today_label, priority,
-            ','.join('%d' % repos[r].get(priority, 0) for r in repo_names))
+      print(','.join([today_label, priority] +
+                     ['%d' % repos[r].get(priority, 0) for r in repo_names]))
 
 
 _REPORTS = {
