@@ -799,3 +799,6 @@ bazel-0.8.tar.gz|bazel|0.8|src|any|tar.gz|standalone|True|{}
 endsinv-0.8.tar.gz|endsinv|0.8|src|any|tar.gz|standalone|True|{}
 endsinv-0.8b.tar.gz|endsinv|0.8b|src|any|tar.gz|standalone|True|{}
 endsinv-0.8.0c.tar.gz|endsinv|0.8.0c|src|any|tar.gz|standalone|True|{}
+bazel-3.4.1-linux-amd64|bazel|3.4.1|x86_64|linux|None|standalone|True|{}
+bazel-3.4.0-linux-arm64|bazel|3.4.0|arm64|linux|None|standalone|True|{}
+bazelisk-linux-arm64|bazelisk|head|arm64|linux|None|standalone|True|{}

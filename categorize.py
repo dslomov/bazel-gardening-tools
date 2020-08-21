@@ -46,7 +46,7 @@ def Categorize(file_name, default_version=None):
     attributes.append('msvc')
     todo = todo.replace('-msvc', '')
 
-  arch, todo = ExtractFeature(todo, ['x86_64', 'amd64'])
+  arch, todo = ExtractFeature(todo, ['x86_64', 'amd64', 'arm64'])
   if arch == 'amd64':
     arch = 'x86_64'
 
