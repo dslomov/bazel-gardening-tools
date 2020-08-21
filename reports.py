@@ -331,6 +331,41 @@ def pr_backlog(reporter, issues):
         ]
     )
 
+def open_issues_by_repo(issues, labels=None):
+    def predicate(issue):
+      if not labels:
+        return is_open(issue)
+      return is_open(issue) and get_any_of_labels(issue, labels)
+
+    repos = {}
+    for issue in filter(predicate, issues):
+      repo = issue['repository_url'].split('/')[-1:][0]
+      if not repo in repos:
+        repos[repo] = collections.defaultdict(int)
+      repos[repo]['all'] += 1
+      if get_any_of_labels(issue, ['documentation', 'type: documentation']):
+        repos[repo]['docs'] += 1
+      has_priority = False
+      for priority in ('P0', 'P1', 'P2', 'P3', 'P4'):
+        if has_label(issue, priority):
+          repos[repo][priority] += 1
+          has_priority = True
+          break
+      if not has_priority:
+          repos[repo]['unprioritized'] += 1
+
+    repo_names = sorted(repos.keys())
+    today_label = datetime.datetime.now().strftime('%Y-%m-%d')
+    print(','.join([today_label, ''] +
+                   ['%s' % r for r in repo_names]))
+    print(','.join([today_label, 'all'] +
+                   ['%d' % repos[r].get('all', 0) for r in repo_names]))
+    print(','.join([today_label, 'docs'] +
+                   ['%d' % repos[r].get('docs', 0) for r in repo_names]))
+    for priority in ('P0', 'P1', 'P2', 'P3', 'P4', 'unprioritized'):
+      print(','.join([today_label, priority] +
+                     ['%d' % repos[r].get(priority, 0) for r in repo_names]))
+
 
 _REPORTS = {
     "more_than_one_team":
@@ -348,6 +383,11 @@ _REPORTS = {
         lambda issues: breaking_changes_1_0(print_report, issues),
     "team_pr_backlog":
         lambda issues: pr_backlog(print_report, issues),
+    "open_issues_by_repo":
+        lambda issues: open_issues_by_repo(issues),
+    "open_doc_issues_by_repo":
+    lambda issues: open_issues_by_repo(
+        issues, labels=['documentation', 'type: documentation']),
     "documentation":
         lambda issues: documentation_issues(print_report, issues),
 }
