@@ -16,7 +16,7 @@ _VERSION_RE = re.compile(
     r'v?'  # with an optional 'v', which we strip in code
     # classic m.n.p with optional '-alpha-N'
     r'(\d+\.\d+\.\d+-((alpha)|(beta)|(gamma))[.-]?\d+)'
-    r'|(\d+\.\d+\.\d+(-?rc\d+)?)'  # m.n.p-RCN
+    r'|(\d+\.\d+\.\d+(-?rc\.?\d+)?)'  # m.n.p-RCN
     r'|(\d+\.\d+\.\d+[abcdefg]?)'
     r'|(\d+\.\d+[abcdefg])'  # 1.0a
     r'|(\d+\.\d+(-?rc\d+)?)'  # m.n-rcN
