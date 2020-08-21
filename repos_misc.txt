@@ -1,3 +1,4 @@
+bazelbuild/bazel-bench
 bazelbuild/bazel-blog
 bazelbuild/bazel-website
 bazelbuild/codelabs
