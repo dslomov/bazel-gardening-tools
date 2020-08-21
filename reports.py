@@ -169,7 +169,8 @@ def make_console_printer(
         show_url=True,
         show_title=False,
         show_author=False,
-        show_teams=False):
+        show_teams=False,
+        truncate_title=True):
     """A customizable console printer."""
 
     def truncate(string, length):
@@ -181,13 +182,14 @@ def make_console_printer(
         if show_age:
             output.append(("{: <4}", latest_update_days_ago(issue)))
         if show_number:
-            output.append(("{: <4}", issue["number"]))
+            output.append(("{: <5}", issue["number"]))
         if show_author:
             output.append(("{: <12}", issue["user"]["login"]))
         if show_url:
-            output.append(("{: <47}", issue_url(issue)))
+            output.append(("{: <48}", issue_url(issue)))
         if show_title:
-            output.append(("{: <50}", truncate(issue["title"], 48)))
+            issue_title = truncate(issue["title"], 48) if truncate_title else issue["title"]
+            output.append(("{: <50}", issue_title))
         if show_teams:
             output.append(("{: <30}", truncate(",".join(teams(issue)), 28)))
 
@@ -195,6 +197,24 @@ def make_console_printer(
                            ]).format(*[parts[1] for parts in output])
 
     return printer
+
+
+def documentation_issues(reporter, issues):
+    reporter(
+        issues,
+        header="Open documentation issues",
+        predicate=lambda issue: (
+            is_open(issue) and
+            has_label(issue, 'type: documentation')
+        ),
+        printer=make_console_printer(
+            show_title=True,
+            truncate_title=False,
+            show_teams=True,
+            show_author=True,
+            show_age=True
+        ),
+    )
 
 
 def issues_without_team(reporter, issues):
@@ -328,6 +348,8 @@ _REPORTS = {
         lambda issues: breaking_changes_1_0(print_report, issues),
     "team_pr_backlog":
         lambda issues: pr_backlog(print_report, issues),
+    "documentation":
+        lambda issues: documentation_issues(print_report, issues),
 }
 
 
