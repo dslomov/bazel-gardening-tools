@@ -8,4 +8,3 @@ bazelbuild/rules_go
 bazelbuild/rules_java
 bazelbuild/rules_kotlin
 bazelbuild/rules_python
-bazelbuild/rules_rust
