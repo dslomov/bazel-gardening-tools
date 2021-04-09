@@ -46,14 +46,32 @@ def Categorize(file_name, default_version=None):
     attributes.append('msvc')
     todo = todo.replace('-msvc', '')
 
-  arch, todo = ExtractFeature(todo, ['x86_64', 'amd64', 'arm64'])
-  if arch == 'amd64':
+  has_unknown, todo = ExtractFeature(todo, ['unknown'])
+
+  arch, todo = ExtractFeature(todo, [
+      'x86_64',
+      'amd64',
+      'arm64',
+      'aarch64',
+      'pc',
+      'unknown',
+  ])
+  if arch in ['amd64', 'pc']:
     arch = 'x86_64'
 
   os, todo = ExtractFeature(
-      todo, ['dist', 'linux', 'darwin', 'macos', 'osx', 'windows'])
-  if os in ['darwin', 'osx']:
+      todo, ['dist',
+             'linux-gnu', 'pc-windows-gnu', 'windows-gnu',
+             'linux', 'gnu',
+             'apple-darwin', 'darwin', 'macos', 'osx',
+             'windows',
+             ])
+  if os in ['apple-darwin', 'darwin', 'osx']:
     os = 'macos'
+  if os in ['gnu', 'linux-gnu']:
+    os = 'linux'
+  if os in ['windows-gnu', 'windows']:
+    os = 'windows'
   if os == 'dist':
     os = 'any'
 
