@@ -13,7 +13,6 @@ secrets = json.load(open("secrets.json"))
 client_id = secrets["client_id"]
 client_secret = secrets["client_secret"]
 
-
 GITHUB_API_URL_BASE = 'https://api.github.com/repos/'
 
 _DEBUG = False
@@ -108,3 +107,30 @@ def fetch_repos(org):
       ret.append(repo['full_name'])
     url = get_next_url(response.info())
   return ret
+
+def fetch_pr_reviews(repo, pr_number):
+  url = GITHUB_API_URL_BASE + repo + '/pulls/%d/reviews' % pr_number
+  ret = []
+  while url:
+    if _DEBUG:
+      print(url)
+    response = urllib.request.urlopen(add_client_secret(url))
+    more_data = json.loads(response.read())
+    ret += more_data
+    url = get_next_url(response.info())
+  return ret
+
+def delete_pr_review(repo, pr_number, review_id):
+  url = GITHUB_API_URL_BASE + repo + '/pulls/%d/reviews/%d' % (pr_number, review_id)
+  req = urllib.request.Request(
+      url=add_client_secret(url),
+      method='DELETE',
+      headers = {'Authorization': 'Token ghp_XXXXXX'}
+  )
+  print(url, str(req))
+  try:
+    response = urllib.request.urlopen(req)
+    print(response)
+  except Exception as e:
+    print(e)
+
