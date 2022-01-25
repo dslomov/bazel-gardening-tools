@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import urllib
 
 import database
 import github
@@ -31,9 +32,12 @@ def label_file_for_repo(repo):
 
 
 def update_labels(repo):
-    labels = github.fetch_labels(repo)
-    repo_basename = repo.split('/')[-1]
-    json.dump(labels, open(label_file_for_repo(repo), "w+"), indent=2)
+    try:
+      labels = github.fetch_labels(repo)
+      repo_basename = repo.split('/')[-1]
+      json.dump(labels, open(label_file_for_repo(repo), "w+"), indent=2)
+    except urllib.error.HTTPError:
+      pass
 
 
 def build_issue_index(issues, reset_repos):
